@@ -329,6 +329,13 @@ int main(int argc, char **argv)
 #endif
     }
 
+    /* Introduce delay based on agent ID */
+    char agent_id[64];
+    strcpy(agent_id, getAgentId());
+    int delay = atoi(agent_id) % 60;
+    mdebug1("Waiting %d minutes before starting syscheck (based on agent ID: %s)", delay, agent_id);
+    usleep(delay * 1000000 * 60); // Convert delay minutes
+
     /* Start the daemon */
     start_daemon();
 

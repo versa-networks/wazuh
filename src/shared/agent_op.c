@@ -17,6 +17,8 @@
 #include "os_auth/auth.h"
 #include "wazuh_db/helpers/wdb_global_helpers.h"
 
+#include "time.h"
+
 #ifdef WAZUH_UNIT_TESTING
 #define static
 #endif
@@ -243,6 +245,59 @@ char *os_read_agent_profile()
 
     fclose(fp);
     return (NULL);
+}
+
+static char cached_id[64] = {0};
+static pthread_mutex_t cached_id_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+char* getAgentId()
+{    
+    mdebug2("Locking to get agent ID in function getAgentId().");
+    w_mutex_lock(&cached_id_mutex);
+    
+    if (cached_id[0] != '\0') {
+        w_mutex_unlock(&cached_id_mutex);
+        return cached_id;
+    }
+    
+#if defined(__linux__) || defined(__MACH__)
+    const char* client_id_path = "etc/client.keys";     // path for linux and mac machines
+#elif defined(WIN32) 
+    const char* client_id_path = "client.keys";         // path for windows machines
+#else 
+    const char* client_id_path = "";                    // undentified
+#endif
+
+    // pre generate random value
+    srand(time(NULL));
+    int rndVal = rand() % 61;
+    snprintf(cached_id, sizeof(cached_id), "%d", rndVal);
+
+    FILE* file = fopen(client_id_path, "r");
+    if (!file) {
+        // failed to open so return a random value
+        w_mutex_unlock(&cached_id_mutex);
+        return cached_id;
+    }
+
+    char line[256];
+    if (fgets(line, sizeof(line), file)) {
+        char* token = strtok(line, " \t\n");
+        if (token) {
+            strncpy(cached_id, token, sizeof(cached_id) - 1);
+            cached_id[sizeof(cached_id) - 1] = '\0';
+        }
+    }
+
+    fclose(file);
+    
+    if (cached_id[0] == '\0') {
+        // client keys not init so return random value
+        snprintf(cached_id, sizeof(cached_id), "%d", rndVal);
+    }
+
+    w_mutex_unlock(&cached_id_mutex);
+    return cached_id;
 }
 
 /* Write the agent info to the queue, for the other processes to read

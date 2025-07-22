@@ -89,6 +89,13 @@ int main(int argc, char **argv)
 
     minfo(STARTUP_MSG, (int)getpid());
 
+    /* Introduce delay based on agent ID */
+    char agent_id[64];
+    strcpy(agent_id, getAgentId());
+    int delay = atoi(agent_id) % 60;
+    mdebug1("Waiting %d minutes before starting modules (based on agent ID: %s)", delay, agent_id);
+    usleep(delay * 1000000 * 60); // Convert delay minutes
+
     // Run modules
 
     for (cur_module = wmodules; cur_module; cur_module = cur_module->next) {

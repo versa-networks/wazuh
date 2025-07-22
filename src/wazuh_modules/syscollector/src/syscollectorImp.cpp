@@ -15,8 +15,6 @@
 #include "stringHelper.h"
 #include "hashHelper.h"
 #include "timeHelper.h"
-#include <string>
-#include <random>
 
 #define TRY_CATCH_TASK(task)                                            \
 do                                                                      \
@@ -910,50 +908,6 @@ static std::string getItemId(const nlohmann::json& item, const std::vector<std::
     return Utils::asciiToHex(hash.hash());
 }
 
-static std::string cached_id;
-
-static std::string getAgentId()
-{
-    if (!cached_id.empty()) {
-        return cached_id;
-    }
-    
-#if defined(__linux__) || defined(__MACH__)
-    const char* client_id_path = "etc/client.keys";     // path for linux and mac machines
-#elif defined(WIN32) 
-    const char* client_id_path = "client.keys";         // path for windows machines
-#else 
-    const char* client_id_path = "";                    // undentified
-#endif
-
-    // pre generate random value
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> distr(0, 60);
-    int rndVal = distr(gen);
-    std::string rndValStr =  std::to_string(rndVal);
-
-    std::ifstream file(client_id_path);
-    if (!file.is_open()) {
-        // failed to open so return a random value
-        return rndValStr;
-    }
-
-    std::string line;
-    if (std::getline(file, line)) {
-        std::istringstream iss(line);
-        iss >> cached_id; // First token is the agent ID
-    }
-
-    if (cached_id.empty()) {
-        // client keys not init so return random value
-        return rndValStr;
-    }
-
-    file.close();
-    return cached_id;
-}
-
 static std::string getItemChecksum(const nlohmann::json& item)
 {
     const auto content{item.dump()};
@@ -1676,20 +1630,10 @@ void Syscollector::syncLoop(std::unique_lock<std::mutex>& lock)
 {
     m_logFunction(LOG_INFO, "Module started.");
 
-    std::string aId = getAgentId();
-    int delay = std::stoi(aId);
-    delay = (delay % 60) * 60; // mod 60, convert to seconds
-
-    m_logFunction(LOG_INFO, "init and waiting before scanning: " + std::to_string(delay) + " seconds");
-    if (!m_cv.wait_for(lock, std::chrono::seconds{delay}, [&]() { return m_stopping; })) {
-        if (m_scanOnStart)
-        {
-            scan();
-            sync();
-        }
-    }
-    else {
-        m_logFunction(LOG_INFO, "syscollector module canceled");
+    if (m_scanOnStart)
+    {
+        scan();
+        sync();
     }
 
     while (!m_cv.wait_for(lock, std::chrono::seconds{m_intervalValue}, [&]()

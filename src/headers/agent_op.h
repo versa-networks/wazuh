@@ -73,6 +73,12 @@ int auth_connect();
 int auth_close(int sock);
 
 /**
+ * @brief Get the agent ID from client.keys file
+ * @return Agent ID as string, or random value if not found
+ */
+char* getAgentId(void);
+
+/**
  * @brief Send a local agent "add" request.
  * @param sock Socket where the request connection will be done.
  * @param id ID of the newly generated key.
