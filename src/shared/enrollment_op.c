@@ -232,15 +232,6 @@ static int w_enrollment_connect(w_enrollment_ctx *cfg, const char * server_addre
         return ENROLLMENT_CONNECTION_FAILURE;
     }
 
-    if (OS_SetRecvTimeout(sock, cfg->recv_timeout, 0) < 0) {
-#if SUN_MAJOR_VERSION == 10
-        // Solaris 10 does not support SO_RCVTIMEO on sockets
-        mdebug1(SET_TIMEO_ERR, strerror(errno), errno);
-#else
-        mwarn(SET_TIMEO_ERR, strerror(errno), errno);
-#endif
-    }
-
     /* Connect the SSL socket */
     cfg->ssl = SSL_new(ctx);
     BIO * sbio = BIO_new_socket(sock, BIO_NOCLOSE);

@@ -95,7 +95,7 @@ class MacportsWrapper final : public IPackageWrapper
             return m_priority;
         }
 
-        int64_t size() const override
+        int size() const override
         {
             return m_size;
         }
@@ -178,7 +178,7 @@ class MacportsWrapper final : public IPackageWrapper
         std::string m_location;
         std::string m_multiarch;
         std::string m_priority;
-        int64_t m_size;
+        int m_size;
         std::string m_vendor;
         std::string m_installTime;
 };

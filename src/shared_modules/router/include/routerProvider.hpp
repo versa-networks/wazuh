@@ -47,9 +47,7 @@ public:
         , m_isLocal {isLocal}
     {
     }
-    // LCOV_EXCL_START
-    ~RouterProvider() = default;
-    // LCOV_EXCL_STOP
+    virtual ~RouterProvider() = default;
     void stop();
     void start();
     void start(const std::function<void()>& onConnect);

@@ -73,19 +73,13 @@ foreach(loop_var ${EXTERNAL_RES})
     check_and_download_dep(${loop_var} ${RESOURCES_URL})
 endforeach(loop_var)
 
-# Read the VERSION JSON file
-file(READ "${SRC_FOLDER}/../VERSION.json" VERSION_JSON)
-
-# Extract "version"
-string(REGEX MATCH "\"version\"[ \t]*:[ \t]*\"([^\"]+)\"" _ ${VERSION_JSON})
-set(VERSION_FILE "v${CMAKE_MATCH_1}")  # <-- Add "v" prefix since old VERSION file had it
-
-# Extract "stage" as revision
-string(REGEX MATCH "\"stage\"[ \t]*:[ \t]*\"([^\"]+)\"" _ ${VERSION_JSON})
-set(REVISION_FILE "${CMAKE_MATCH_1}")
-
-# Define preprocessor macros
+# Read VERSION and REVISION file and set variable with the content.
+file(READ ${SRC_FOLDER}/VERSION VERSION_FILE)
+string(STRIP ${VERSION_FILE} VERSION_FILE)
 add_definitions(-DVERSION="${VERSION_FILE}")
+
+file(READ ${SRC_FOLDER}/REVISION REVISION_FILE)
+string(STRIP ${REVISION_FILE} REVISION_FILE)
 add_definitions(-DREVISION="${REVISION_FILE}")
 
 ## If REVISION OR FILE is empty fail
@@ -109,7 +103,6 @@ link_directories(${SRC_FOLDER}/external/openssl/)
 link_directories(${SRC_FOLDER}/external/lzma/build/)
 link_directories(${SRC_FOLDER}/external/zlib/)
 link_directories(${SRC_FOLDER}/external/zlib/contrib/minizip/)
-link_directories(${SRC_FOLDER}/external/flatbuffers/build/)
 
 include_directories(${SRC_FOLDER}/shared_modules/common)
 include_directories(${SRC_FOLDER}/shared_modules/utils)
@@ -140,4 +133,3 @@ add_subdirectory(shared_modules/http-request)
 add_subdirectory(shared_modules/indexer_connector)
 add_subdirectory(wazuh_modules/vulnerability_scanner)
 add_subdirectory(shared_modules/keystore)
-add_subdirectory(wazuh_modules/inventory_harvester)

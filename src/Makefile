@@ -85,7 +85,6 @@ EXTERNAL_JEMALLOC=external/jemalloc/
 ifeq (${uname_S},Linux)
 EXTERNAL_RPM=external/rpm/
 EXTERNAL_POPT=external/popt/
-EXTERNAL_LIBBPF=external/libbpf-bootstrap/
 endif
 # XXX Becareful NO EXTRA Spaces here
 PG_CONFIG?=pg_config
@@ -105,7 +104,6 @@ SYSCOLLECTOR=wazuh_modules/syscollector/
 ROUTER=shared_modules/router/
 CONTENT_MANAGER=shared_modules/content_manager/
 VULNERABILITY_SCANNER=wazuh_modules/vulnerability_scanner/
-INVENTORY_HARVESTER=wazuh_modules/inventory_harvester/
 SYSINFO=data_provider/
 SYSCHECK=syscheckd/
 USE_PRELUDE?=no
@@ -121,7 +119,7 @@ DISABLE_SYSC?=no
 DISABLE_CISCAT?=no
 IMAGE_TRUST_CHECKS?=1
 CA_NAME?=DigiCert Assured ID Root CA
-HTTP_REQUEST_BRANCH?=75384783d339a817b8d8f13f778051a878d642a6
+HTTP_REQUEST_BRANCH?=8a302e514de6ef4df86717027682922f705330f4
 
 ifeq (${TARGET},winagent)
 CMAKE_OPTS=-DCMAKE_SYSTEM_NAME=Windows -DCMAKE_C_COMPILER=${MING_BASE}${CC} -DCMAKE_CXX_COMPILER=${MING_BASE}${CXX}
@@ -435,7 +433,7 @@ endif
 
 OSSEC_CFLAGS+=${DEFINES}
 OSSEC_CFLAGS+=-pipe -Wall -Wextra -std=gnu99
-OSSEC_CFLAGS+=-I./ -I./headers/ -I${EXTERNAL_OPENSSL}include -I$(EXTERNAL_JSON) -I${EXTERNAL_LIBYAML}include -I${EXTERNAL_CURL}include -I${EXTERNAL_MSGPACK}include -I${EXTERNAL_BZIP2} -I${SHARED_MODULES}common -I${DBSYNC}include -I${RSYNC}include -I${SYSCOLLECTOR}include  -I${SYSINFO}include  -I${EXTERNAL_LIBPCRE2}include -I${EXTERNAL_RPM}/builddir/output/include -I${SYSCHECK}include -I${ROUTER}include -I${CONTENT_MANAGER}include -I${VULNERABILITY_SCANNER}include -I${INVENTORY_HARVESTER}include -I./shared_modules/
+OSSEC_CFLAGS+=-I./ -I./headers/ -I${EXTERNAL_OPENSSL}include -I$(EXTERNAL_JSON) -I${EXTERNAL_LIBYAML}include -I${EXTERNAL_CURL}include -I${EXTERNAL_MSGPACK}include -I${EXTERNAL_BZIP2} -I${SHARED_MODULES}common -I${DBSYNC}include -I${RSYNC}include -I${SYSCOLLECTOR}include  -I${SYSINFO}include  -I${EXTERNAL_LIBPCRE2}include -I${EXTERNAL_RPM}/builddir/output/include -I${SYSCHECK}include -I${ROUTER}include -I${CONTENT_MANAGER}include -I${VULNERABILITY_SCANNER}include -I./shared_modules/
 
 OSSEC_CFLAGS += ${CFLAGS}
 OSSEC_LDFLAGS += ${LDFLAGS}
@@ -894,7 +892,8 @@ winagent: external win32/libwinpthread-1.dll win32/libwinpthreadpatched.a ${WAZU
 	cd win32/ && ./unix2dos.pl ../../etc/internal_options.conf > internal_options.conf
 	cd win32/ && ./unix2dos.pl ../../etc/local_internal_options-win.conf > default-local_internal_options.conf
 	cd win32/ && ./unix2dos.pl ../../LICENSE > LICENSE.txt
-	cd win32/ && ./unix2dos.pl ../../VERSION.json > VERSION.json
+	cd win32/ && ./unix2dos.pl ../VERSION > VERSION
+	cd win32/ && ./unix2dos.pl ../REVISION > REVISION
 	cd win32/ && makensis wazuh-installer.nsi
 
 win32/shared_modules: $(WAZUHEXT_LIB)
@@ -949,7 +948,6 @@ ROCKSDB_LIB = $(EXTERNAL_ROCKSDB)build/librocksdb.so
 FLATBUFFERS_LIB = $(EXTERNAL_FLATBUFFERS)build/libflatbuffers.a
 LZMA_LIB = $(EXTERNAL_LZMA)build/liblzma.a
 LUA_LIB = ${EXTERNAL_LUA}install/lib/liblua.a
-LIBBPF_LIB = $(EXTERNAL_LIBBPF)build/modern.bpf.o
 
 EXTERNAL_LIBS := $(JSON_LIB) $(ZLIB_LIB) $(OPENSSL_LIB) $(CRYPTO_LIB) $(SQLITE_LIB) $(LIBYAML_LIB) $(LIBPCRE2_LIB)
 
@@ -1002,14 +1000,6 @@ endif
 
 ifeq (${TARGET},server)
 external: $(ROCKSDB_LIB)
-endif
-
-ifeq (${uname_S},Linux)
-ifneq ($(CHECK_CENTOS5),YES)
-ifneq (${TARGET},winagent)
-external: ${LIBBPF_LIB}
-endif
-endif
 endif
 
 ifneq (${TARGET},winagent)
@@ -1068,11 +1058,6 @@ endif
 endif
 endif
 endif
-
-#### libbpf-bootstrap #########
-
-$(LIBBPF_LIB):
-	cd $(EXTERNAL_LIBBPF) && mkdir -p build && cd build && cmake .. && ${MAKE}
 
 ### rocks db ###
 
@@ -1383,7 +1368,7 @@ TAR := tar -xf
 GUNZIP := gunzip
 GZIP := gzip
 CURL := curl -so
-DEPS_VERSION = 43
+DEPS_VERSION = 4.10.2
 RESOURCES_URL_BASE := https://packages.wazuh.com/deps/
 RESOURCES_URL := $(RESOURCES_URL_BASE)$(DEPS_VERSION)
 CPYTHON := cpython
@@ -1443,19 +1428,10 @@ endif
 endif
 endif
 
-# Define CPYTHON pre-compile
-CPYTHON_ARCHIVE := cpython_x86_64
-ifeq ($(PRECOMPILED_ARCH),/aarch64)
-	CPYTHON_ARCHIVE := cpython_arm64
-else
-	CPYTHON_ARCHIVE := cpython_x86_64
-endif
-
 ifeq ($(CHECK_CENTOS5),YES)
 PRECOMPILED_OS := el5
 # Avoid the linkage of incompatible libraries in Data Provider for CentOS 5 and Red Hat 5
 SYSINFO_OS+=-DCMAKE_CHECK_CENTOS5=1
-SYSCHECK_OS=-DCMAKE_CHECK_CENTOS5=1
 endif
 
 ifeq (,$(filter ${EXTERNAL_SRC_ONLY},YES yes y Y 1))
@@ -1464,20 +1440,11 @@ PRECOMPILED_RES := $(PRECOMPILED_OS)$(PRECOMPILED_ARCH)
 endif
 
 # Agent dependencies
-EXTERNAL_RES := cJSON curl libdb libffi libyaml openssl procps sqlite zlib audit-userspace msgpack bzip2 nlohmann googletest libpcre2 libplist pacman libarchive popt lua rpm rocksdb lzma cpp-httplib benchmark libbpf-bootstrap
+EXTERNAL_RES := cJSON curl libdb libffi libyaml openssl procps sqlite zlib audit-userspace msgpack bzip2 nlohmann googletest libpcre2 libplist pacman libarchive popt lua rpm rocksdb lzma cpp-httplib benchmark
 ifneq (${TARGET},agent)
 ifneq (${TARGET},winagent)
 	# Manager extra dependency
 	EXTERNAL_RES += $(CPYTHON) jemalloc flatbuffers
-endif
-endif
-
-# Check the target and remove libbpf-bootstrap if the target is winagent OR non-Linux OS
-ifeq (${TARGET}, winagent)
-	EXTERNAL_RES := $(filter-out libbpf-bootstrap, $(EXTERNAL_RES))
-else
-ifneq (${uname_S}, Linux)
-	EXTERNAL_RES := $(filter-out libbpf-bootstrap, $(EXTERNAL_RES))
 endif
 endif
 
@@ -1497,23 +1464,23 @@ ifeq (,$(filter ${PYTHON_SOURCE},YES yes y Y 1))
 ifneq (,$(PRECOMPILED_RES))
 external/$(CPYTHON).tar.gz: external-precompiled/$(CPYTHON).tar.gz
 	test -e $(patsubst %.gz,%,$@) ||\
-	($(CURL) $@ $(RESOURCES_URL)/libraries/sources/$(CPYTHON_ARCHIVE).tar.gz &&\
+	($(CURL) $@ $(RESOURCES_URL)/libraries/sources/$(patsubst external/%,%,$@) &&\
 	cd external && $(GUNZIP) $(patsubst external/%,%,$@) && $(TAR) $(patsubst external/%.gz,%,$@) && rm $(patsubst external/%.gz,%,$@))
 	test -d $(patsubst %.tar.gz,%,$@) || (cd external && $(GZIP) $(patsubst external/%.gz,%,$@))
 
 external-precompiled/$(CPYTHON).tar.gz:
 	-$(CURL) external/$(patsubst external-precompiled/%,%,$@) $(RESOURCES_URL)/libraries/$(PRECOMPILED_RES)/$(patsubst external-precompiled/%,%,$@) || true
-	-cd external && [ -f $(patsubst external-precompiled/%,%,$@) ] && $(GUNZIP) $(patsubst external-precompiled/%,%,$@) || true
+	-cd external && test -e $(patsubst external-precompiled/%,%,$@) && $(GUNZIP) $(patsubst external-precompiled/%,%,$@) || true
 else
 external/$(CPYTHON).tar.gz:
-	$(CURL) $@ $(RESOURCES_URL)/libraries/sources/$(CPYTHON_ARCHIVE).tar.gz
+	$(CURL) $@ $(RESOURCES_URL)/libraries/sources/$(patsubst external/%,%,$@)
 	cd external && $(GUNZIP) $(patsubst external/%,%,$@)
 	cd external && $(TAR) $(patsubst external/%.gz,%,$@)
 	rm $(patsubst %.gz,%,$@)
 endif
 else
 external/$(CPYTHON).tar.gz:
-	$(CURL) $@ $(RESOURCES_URL)/libraries/sources/$(CPYTHON_ARCHIVE).tar.gz
+	$(CURL) $@ $(RESOURCES_URL)/libraries/sources/$(patsubst external/%,%,$@)
 	cd external && $(GUNZIP) $(patsubst external/%,%,$@)
 	cd external && $(TAR) $(patsubst external/%.gz,%,$@)
 	rm $(patsubst %.gz,%,$@)
@@ -1539,9 +1506,9 @@ external/nlohmann.tar.gz: external-precompiled/nlohmann.tar.gz
 
 external-precompiled/nlohmann.tar.gz:
 	-$(CURL) external/$(patsubst external-precompiled/%,%,$@) $(RESOURCES_URL_NLOHMANN)/libraries/$(PRECOMPILED_RES)/$(patsubst external-precompiled/%,%,$@) || true
-	-cd external && [ -f $(patsubst external-precompiled/%,%,$@) ] && $(GUNZIP) $(patsubst external-precompiled/%,%,$@) || true
-	-cd external && [ -f $(patsubst external-precompiled/%.gz,%,$@) ] && $(TAR) $(patsubst external-precompiled/%.gz,%,$@) || true
-	-[ -f external/$(patsubst external-precompiled/%.gz,%,$@) ] && rm external/$(patsubst external-precompiled/%.gz,%,$@) || true
+	-cd external && test -e $(patsubst external-precompiled/%,%,$@) && $(GUNZIP) $(patsubst external-precompiled/%,%,$@) || true
+	-cd external && test -e $(patsubst external-precompiled/%.gz,%,$@) && $(TAR) $(patsubst external-precompiled/%.gz,%,$@) || true
+	-test -e external/$(patsubst external-precompiled/%.gz,%,$@) && rm external/$(patsubst external-precompiled/%.gz,%,$@) || true
 else
 external/nlohmann.tar.gz:
 	$(CURL) $@ $(RESOURCES_URL_NLOHMANN)/libraries/sources/$(patsubst external/%,%,$@)
@@ -1569,9 +1536,9 @@ endif
 ifneq (,$(PRECOMPILED_RES))
 external-precompiled/%.tar.gz:
 	-$(CURL) external/$(patsubst external-precompiled/%,%,$@) $(RESOURCES_URL)/libraries/$(PRECOMPILED_RES)/$(patsubst external-precompiled/%,%,$@) || true
-	-cd external && [ -f $(patsubst external-precompiled/%,%,$@) ] && $(GUNZIP) $(patsubst external-precompiled/%,%,$@) || true
-	-cd external && [ -f $(patsubst external-precompiled/%.gz,%,$@) ] && $(TAR) $(patsubst external-precompiled/%.gz,%,$@) || true
-	-[ -f external/$(patsubst external-precompiled/%.gz,%,$@) ] && rm external/$(patsubst external-precompiled/%.gz,%,$@) || true
+	-cd external && test -e $(patsubst external-precompiled/%,%,$@) && $(GUNZIP) $(patsubst external-precompiled/%,%,$@) || true
+	-cd external && test -e $(patsubst external-precompiled/%.gz,%,$@) && $(TAR) $(patsubst external-precompiled/%.gz,%,$@) || true
+	-test -e external/$(patsubst external-precompiled/%.gz,%,$@) && rm external/$(patsubst external-precompiled/%.gz,%,$@) || true
 endif
 
 # Shared tools
@@ -2011,7 +1978,7 @@ $(WAZUHEXT_LIB): $(EXTERNAL_LIBS)
 		ar -x libwazuhext/$$lib; \
 		mv *.o libwazuhext/; \
 	done
-	$(OSSEC_SHARED) $(OSSEC_CFLAGS) libwazuhext/*.o -o $@ -static-libgcc -latomic -lm
+	$(OSSEC_SHARED) $(OSSEC_CFLAGS) libwazuhext/*.o -o $@ -static-libgcc -latomic
 else
 ifeq (${uname_S},HP-UX)
 $(WAZUHEXT_LIB): $(EXTERNAL_LIBS)
@@ -2296,7 +2263,7 @@ librootcheck.a: ${rootcheck_o_lib}
 #### FIM ######
 
 wazuh-syscheckd: librootcheck.a libwazuh.a ${WAZUHEXT_LIB} build_shared_modules
-	cd syscheckd && mkdir -p build && cd build && cmake ${SYSCHECK_OS} ${CMAKE_OPTS} -DCMAKE_C_FLAGS="${DEFINES} -pipe -Wall -Wextra -std=gnu99" ${SYSCHECK_TEST} ${SYSCHECK_RELEASE_TYPE} .. && ${MAKE}
+	cd syscheckd && mkdir -p build && cd build && cmake ${CMAKE_OPTS} -DCMAKE_C_FLAGS="${DEFINES} -pipe -Wall -Wextra -std=gnu99" ${SYSCHECK_TEST} ${SYSCHECK_RELEASE_TYPE} .. && ${MAKE}
 
 #### Monitor #######
 
@@ -2758,7 +2725,6 @@ ifneq ($(wildcard external/*/*),)
 	rm -rf $(EXTERNAL_GOOGLE_TEST)build
 	rm -rf $(EXTERNAL_GOOGLE_BENCHMARK)build
 	rm -rf $(EXTERNAL_ROCKSDB)build
-	rm -rf $(EXTERNAL_LIBBPF)build
 	rm -rf $(EXTERNAL_FLATBUFFERS)build
 	rm -rf $(EXTERNAL_LZMA)build
 	-cd ${EXTERNAL_LIBPLIST} && ${MAKE} clean && rm -rf bin/*
@@ -2916,7 +2882,8 @@ clean-windows:
 	rm -f win32/libwinpthread-1.dll
 	rm -f win32/*.o
 	rm -f win32/version-*.o
-	rm -f win32/VERSION.json
+	rm -f win32/VERSION
+	rm -f win32/REVISION
 	rm -f win32/libstdc++-6.dll
 	rm -f win32/libgcc_s_dw2-1.dll
 	rm -f win32/libgcc_s_sjlj-1.dll

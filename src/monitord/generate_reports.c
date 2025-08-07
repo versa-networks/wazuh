@@ -46,7 +46,6 @@ void generate_reports(int cday, int cmon, int cyear, const struct tm *p)
                 s++;
                 continue;
             } else if (pid == 0) {
-                /* Child process */
                 char fname[256];
                 char aname[256];
                 fname[255] = '\0';
@@ -54,16 +53,18 @@ void generate_reports(int cday, int cmon, int cyear, const struct tm *p)
                 snprintf(fname, 255, "/logs/.report-%d.log", (int)getpid());
 
                 minfo("Starting daily reporting for '%s'", mond.reports[s]->title);
-                mdebug1("Generating report from PID %d", (int)getpid());
+                mond.reports[s]->r_filter.fp = wfopen(fname, "w+");
+                if (!mond.reports[s]->r_filter.fp) {
+                    merror("Unable to open temporary reports file.");
+                    s++;
+                    continue;
+                }
 
                 snprintf(aname, 255, "%s/%d/%s/ossec-%s-%02d.log", ALERTS, cyear, monthss[cmon], "alerts", cday);
 
                 for (i = 1; !IsFile(aname); i++) {
-                    mond.reports[s]->r_filter.fp = wfopen(fname, "w+");
-                    if (!mond.reports[s]->r_filter.fp) {
-                        merror("Unable to open temporary reports file.");
-                        exit(1);
-                    }
+                    /* Open the log file */
+                    snprintf(aname, 255, "%s/%d/%s/ossec-%s-%02d.log", ALERTS, cyear, monthss[cmon], "alerts", cday);
                     os_strdup(aname, mond.reports[s]->r_filter.filename);
 
                     /* Start report */
@@ -71,7 +72,7 @@ void generate_reports(int cday, int cmon, int cyear, const struct tm *p)
                     fflush(mond.reports[s]->r_filter.fp);
 
                     if (ftell(mond.reports[s]->r_filter.fp) < 10) {
-                        mdebug1("Report '%s' empty for '%s'.", mond.reports[s]->title, mond.reports[s]->r_filter.filename);
+                        minfo("Report '%s' empty.", mond.reports[s]->title);
                     } else if (OS_SendCustomEmail(mond.reports[s]->emailto,
                                                   mond.reports[s]->title,
                                                   mond.smtpserver,
@@ -81,9 +82,7 @@ void generate_reports(int cday, int cmon, int cyear, const struct tm *p)
                                                   mond.reports[s]->r_filter.fp,
                                                   p)
                                != 0) {
-                        mwarn("Unable to send report email for '%s'.", mond.reports[s]->title);
-                    } else {
-                        mdebug1("Report '%s' for '%s' sent.", mond.reports[s]->title, mond.reports[s]->r_filter.filename);
+                        mwarn("Unable to send report email.");
                     }
 
                     fclose(mond.reports[s]->r_filter.fp);
@@ -104,7 +103,6 @@ void generate_reports(int cday, int cmon, int cyear, const struct tm *p)
             s++;
         }
 
-        mdebug1("Waiting for %d child processes to finish", childcount);
         while (childcount) {
             int wp;
             wp = waitpid((pid_t) - 1, NULL, WNOHANG);
@@ -124,7 +122,6 @@ void generate_reports(int cday, int cmon, int cyear, const struct tm *p)
                     }
                 }
             } else {
-                mdebug1("Child process %d finished", wp);
                 childcount--;
             }
         }

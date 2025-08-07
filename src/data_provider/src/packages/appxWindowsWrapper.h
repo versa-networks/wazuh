@@ -95,7 +95,7 @@ class AppxWindowsWrapper final : public IPackageWrapper
             return UNKNOWN_VALUE;
         }
 
-        int64_t size() const override
+        int size() const override
         {
             return 0;
         }

@@ -174,8 +174,8 @@ namespace Utils
     private:
         mutable std::mutex m_mutex;
         std::condition_variable m_cv;
-        Tq m_queue;
         std::atomic<bool> m_canceled {};
+        Tq m_queue;
     };
 
     template<typename T, typename Tq = std::queue<T>>

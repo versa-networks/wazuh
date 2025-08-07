@@ -40,12 +40,12 @@ info:
 
     <SecurityDefinitions />
 
-  version: '5.0.0'
-  x-revision: 'alpha0'
+  version: '4.10.2'
+  x-revision: '41021'
   title: 'Wazuh API REST'
   license:
     name: 'GPL 2.0'
-    url: 'https://github.com/wazuh/wazuh/blob/v5.0.0/LICENSE'
+    url: 'https://github.com/wazuh/wazuh/blob/v4.10.2/LICENSE'
 
 servers:
   - url: '{protocol}://{host}:{port}'
@@ -466,7 +466,7 @@ x-rbac-catalog:
         - $ref: '#/x-rbac-catalog/resources/user:id'
         - $ref: '#/x-rbac-catalog/resources/rule:id'
       example:
-        actions: ['security:delete']
+        actions: ['security:update']
         resources: ['policy:id:*', 'role:id:3', 'user:id:4', 'rule:id:2']
         effect: "deny"
     'security:read_config':
@@ -485,14 +485,6 @@ x-rbac-catalog:
         actions: ['security:update_config']
         resources: ['*:*:*']
         effect: "allow"
-    'security:revoke':
-      description: "Revoke all active JWT tokens"
-      resources:
-        - $ref: '#/x-rbac-catalog/resources/*:*'
-      example:
-        actions: ['security:revoke']
-        resources: ['*:*:*']
-        effect: "deny"
     'syscheck:read':
       description: "Access information from agents syscheck database"
       resources:
@@ -571,7 +563,7 @@ components:
             detail: "Permission denied: Resource type: *:*"
             remediation: "Please, make sure you have permissions to execute the current request. For more information
             on how to set up permissions, please visit
-            https://documentation.wazuh.com/5.0/user-manual/api/rbac/configuration.html"
+            https://documentation.wazuh.com/4.10/user-manual/api/rbac/configuration.html"
             error: 4000
             dapi_errors:
               unknown-node:
@@ -638,7 +630,7 @@ components:
             title: "Wazuh Error"
             detail: "Maximum number of requests per minute reached"
             remediation: "This limit can be changed in api.yaml file. More information here:
-            https://documentation.wazuh.com/5.0/user-manual/api/security/configuration.html"
+            https://documentation.wazuh.com/4.10/user-manual/api/security/configuration.html"
             code: 6001
 
     ResourceNotFoundResponse:
@@ -651,7 +643,7 @@ components:
             title: "Resource Not Found"
             detail: "The group does not exist"
             remediation: "Please, use `GET /groups` to find all available groups:
-            https://documentation.wazuh.com/5.0/user-manual/api/rbac/configuration.html"
+            https://documentation.wazuh.com/4.10/user-manual/api/rbac/configuration.html"
             code: 1710
             dapi_errors:
               unknown-node:
@@ -1333,8 +1325,9 @@ components:
           type: string
           description: "API version in the manager"
         revision:
-          type: string
+          type: integer
           description: "API revision"
+          format: int32
         license_name:
           type: string
           description: "API license name"
@@ -3819,8 +3812,6 @@ components:
           type: string
         tz_name:
           type: string
-        uuid:
-          type: string
 
     WazuhManagerConfiguration:
       type: object
@@ -4038,7 +4029,7 @@ components:
           type: number
           format: float
           description: "Same as `alerts_written` but focusing on [FTS alerts]
-          (https://documentation.wazuh.com/5.0/user-manual/ruleset/ruleset-xml-syntax/decoders.html?highlight=fts
+          (https://documentation.wazuh.com/4.10/user-manual/ruleset/ruleset-xml-syntax/decoders.html?highlight=fts
           #fts)"
         hostinfo_queue_size:
           type: number
@@ -4386,12 +4377,6 @@ components:
           description: "Enable features under development"
           type: boolean
           default: false
-        authentication_pool_size:
-          description: "Number of processes dedicated to processing authentication requests"
-          type: integer
-          minimum: 1
-          maximum: 50
-          default: 2
 
     LastScan:
       type: object
@@ -6091,9 +6076,7 @@ components:
     purge:
       in: query
       name: purge
-      description: |
-        Permanently delete an agent from the key store. The wazuh-authd `purge` configuration option has 
-        precedence over this parameter, when enabled, agents will be permanently deleted regardless of this value.
+      description: "Permanently delete an agent from the key store"
       schema:
         type: boolean
         default: false
@@ -7273,9 +7256,9 @@ paths:
               example:
                 title: "Wazuh API"
                 api_version: "v4.5.0"
-                revision: 'beta1'
+                revision: '40100'
                 license_name: "GPL 2.0"
-                license_url: "https://github.com/wazuh/wazuh/blob/v5.0.0/LICENSE"
+                license_url: "https://github.com/wazuh/wazuh/blob/v4.10.2/LICENSE"
                 hostname: "wazuh"
                 timestamp: "2019-04-02T08:08:11Z"
 
@@ -8902,8 +8885,8 @@ paths:
                           code: 1707
                           message: "Cannot send request, agent is not active"
                           remediation: "Please, check non-active agents connection and try again.
-                           Visit https://documentation.wazuh.com/5.0/user-manual/registering/index.html
-                           and https://documentation.wazuh.com/5.0/user-manual/agents/agent-connection.html
+                           Visit https://documentation.wazuh.com/4.10/user-manual/registering/index.html
+                           and https://documentation.wazuh.com/4.10/user-manual/agents/agent-connection.html
                            to obtain more information on registering and connecting agents"
                         id:
                           - '009'
@@ -10073,7 +10056,6 @@ paths:
                         drop_privileges: true
                         experimental_features: false
                         max_upload_size: 10485760
-                        authentication_pool_size: 2
                         intervals:
                           request_timeout: 10
                         https:
@@ -10120,7 +10102,6 @@ paths:
                         drop_privileges: true
                         experimental_features: false
                         max_upload_size: 10485760
-                        authentication_pool_size: 2
                         intervals:
                           request_timeout: 10
                         https:
@@ -10167,7 +10148,6 @@ paths:
                         drop_privileges: true
                         experimental_features: false
                         max_upload_size: 10485760
-                        authentication_pool_size: 2
                         intervals:
                           request_timeout: 10
                         https:
@@ -10319,7 +10299,6 @@ paths:
                       openssl_support: yes
                       tz_offset: +0000
                       tz_name: UTC
-                      uuid: c842f85c-c24b-4b39-9508-093ce53482e7
                   total_affected_items: 1
                   total_failed_items: 0
                   failed_items: []
@@ -10554,9 +10533,6 @@ paths:
                           - etc/lists/audit-keys
                           - etc/lists/amazon/aws-eventnames
                           - etc/lists/security-eventchannel
-                          - etc/lists/malicious-ioc/malware-hashes
-                          - etc/lists/malicious-ioc/malicious-ip
-                          - etc/lists/malicious-ioc/malicious-domains
                       auth:
                         disabled: no
                         port: "1515"
@@ -12030,7 +12006,6 @@ paths:
                       openssl_support: yes
                       tz_offset: +0000
                       tz_name: UTC
-                      uuid: c842f85c-c24b-4b39-9508-093ce53482e7
                   total_affected_items: 1
                   total_failed_items: 0
                   failed_items: []
@@ -12931,7 +12906,6 @@ paths:
                         drop_privileges: true
                         experimental_features: false
                         max_upload_size: 10485760
-                        authentication_pool_size: 2
                         intervals:
                           request_timeout: 10
                         https:
@@ -17355,8 +17329,6 @@ paths:
       summary: "Revoke JWT tokens"
       description: "This method should be called to revoke all active JWT tokens"
       operationId: api.controllers.security_controller.revoke_all_tokens
-      x-rbac-actions:
-        - $ref: "#/x-rbac-catalog/actions/security:revoke"
       responses:
         '200':
           description: "Tokens were successfully revoked"
@@ -19138,4 +19110,4 @@ paths:
 
 externalDocs:
   description: "Learn more about the Wazuh API"
-  url: 'https://documentation.wazuh.com/5.0/user-manual/api/index.html'
+  url: 'https://documentation.wazuh.com/4.10/user-manual/api/index.html'

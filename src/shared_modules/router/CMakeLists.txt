@@ -30,7 +30,6 @@ include_directories(${SHARED_MODULES}/utils)
 
 # Link directories
 link_directories(${SRC_FOLDER}/external/flatbuffers/build/)
-link_directories(${SRC_FOLDER}/)
 
 file(GLOB ROUTER_SRC
     "src/*.cpp"
@@ -40,7 +39,7 @@ add_library(router SHARED
     ${ROUTER_SRC}
     )
 
-target_link_libraries(router gcc_s flatbuffers wazuhext)
+target_link_libraries(router gcc_s flatbuffers)
 
 set_target_properties(router PROPERTIES
         BUILD_RPATH_USE_ORIGIN TRUE

@@ -47,11 +47,6 @@ class RpmLibMock : public IRpmLibWrapper
         MOCK_METHOD(rpmdbMatchIterator, rpmtsInitIterator, (const rpmts ts, rpmDbiTagVal rpmtag, const void* keypointer, size_t keylen), (override));
         MOCK_METHOD(Header, rpmdbNextIterator, (rpmdbMatchIterator mi), (override));
         MOCK_METHOD(rpmdbMatchIterator, rpmdbFreeIterator, (rpmdbMatchIterator mi), (override));
-        MOCK_METHOD(rpmfi, rpmfiNew, (rpmts ts, Header h, rpmTagVal tag, rpmfiFlags flags), (override));
-        MOCK_METHOD(rpm_count_t, rpmfiFC, (rpmfi fi), (override));
-        MOCK_METHOD(int, rpmfiNext, (rpmfi fi), (override));
-        MOCK_METHOD(const char*, rpmfiFN, (rpmfi fi), (override));
-        MOCK_METHOD(rpmfi, rpmfiFree, (rpmfi fi), (override));
 };
 
 
@@ -280,7 +275,7 @@ TEST(RpmLibTest, SinglePackage)
     EXPECT_CALL(*mock, rpmdbNextIterator(_)).WillOnce(Return(headerMock)).WillOnce(nullptr);
 
     EXPECT_CALL(*mock, headerGet(headerMock, _, tdMock, HEADERGET_DEFAULT)).WillRepeatedly(Return(1));
-    EXPECT_CALL(*mock, rpmtdGetString(_)).Times(10).WillOnce(Return("name"))
+    EXPECT_CALL(*mock, rpmtdGetString(_)).Times(9).WillOnce(Return("name"))
     .WillOnce(Return("version"))
     .WillOnce(Return("release"))
     .WillOnce(Return("summary"))
@@ -288,8 +283,7 @@ TEST(RpmLibTest, SinglePackage)
     .WillOnce(Return("group"))
     .WillOnce(Return("source"))
     .WillOnce(Return("arch"))
-    .WillOnce(Return("description"))
-    .WillOnce(Return("name"));
+    .WillOnce(Return("description"));
     EXPECT_CALL(*mock, rpmtdGetNumber(_)).Times(3)
     .WillOnce(Return(1)) // epoch
     .WillOnce(Return(20)) // installtime
@@ -333,7 +327,7 @@ TEST(RpmLibTest, TwoPackages)
     .WillOnce(nullptr);
 
     EXPECT_CALL(*mock, headerGet(headerMock, _, tdMock, HEADERGET_DEFAULT)).WillRepeatedly(Return(1));
-    EXPECT_CALL(*mock, rpmtdGetString(_)).Times(20).WillOnce(Return("name"))
+    EXPECT_CALL(*mock, rpmtdGetString(_)).Times(18).WillOnce(Return("name"))
     .WillOnce(Return("version"))
     .WillOnce(Return("release"))
     .WillOnce(Return("summary"))
@@ -343,7 +337,6 @@ TEST(RpmLibTest, TwoPackages)
     .WillOnce(Return("arch"))
     .WillOnce(Return("description"))
     .WillOnce(Return("name"))
-    .WillOnce(Return("name"))
     .WillOnce(Return("version"))
     .WillOnce(Return("release"))
     .WillOnce(Return("summary"))
@@ -351,8 +344,7 @@ TEST(RpmLibTest, TwoPackages)
     .WillOnce(Return("group"))
     .WillOnce(Return("source"))
     .WillOnce(Return("arch"))
-    .WillOnce(Return("description"))
-    .WillOnce(Return("name"));
+    .WillOnce(Return("description"));
     EXPECT_CALL(*mock, rpmtdGetNumber(_)).Times(6).WillOnce(Return(1)) // epoch
     .WillOnce(Return(20)) // installtime
     .WillOnce(Return(20)) // size

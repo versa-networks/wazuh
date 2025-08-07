@@ -1,262 +1,36 @@
 # Change Log
 All notable changes to this project will be documented in this file.
 
-## [v5.0.0]
-
-
-## [v4.14.0]
-
-### Ruleset
-
-#### Changed
-
-- Fixed multiple Rocky Linux SCA checks generating incorrect results. ([#29976](https://github.com/wazuh/wazuh/pull/29976))
-- Fixed missing Check (2.3.7.6) in Windows Server 2019 v2.0.0. ([#30173](https://github.com/wazuh/wazuh/pull/30173))
-
-
-## [v4.13.0]
+## [v4.10.2]
 
 ### Manager
 
-### Added
-
-- Added Analysisd ability to do a hot ruleset reload. ([#29458](https://github.com/wazuh/wazuh/pull/29458))
-
 #### Fixed
-- Fixed missing agent version handling in Vulnerability Detector. ([#29181](https://github.com/wazuh/wazuh/pull/29181))
-- Fixed race condition in agent status synchronization between worker and master. ([#29624](https://github.com/wazuh/wazuh/pull/29624))
+
+- Enabled inventory synchronization in Vulnerability Detector when the Indexer module is disabled (backport from 4.11.0). ([#29612](https://github.com/wazuh/wazuh/pull/29612))
+- Fixed the OS CPE build for package scans with data from Wazuh-DB (backport from 4.11.1). ([#29613](https://github.com/wazuh/wazuh/pull/29613))
+- Fixed heap buffer overflow in Analysisd rule parser (backport from 4.11.1). ([#29599](https://github.com/wazuh/wazuh/pull/29599))
+- Improved the signal handling during processes stop (backport from 4.12.0). ([#29615](https://github.com/wazuh/wazuh/pull/29615))
+- Fixed crash when reading email alerts missing the `email_to` attribute (backport from 4.12.0). ([#29616](https://github.com/wazuh/wazuh/pull/29616))
 
 #### Changed
-- Improved reports functionality to avoid duplicated daily FIM reports. ([#29232](https://github.com/wazuh/wazuh/pull/29232))
-- Optimized agent query endpoints. ([#29363](https://github.com/wazuh/wazuh/pull/29363))
-- Implemented RBAC resource cache with TTL support. ([#29406](https://github.com/wazuh/wazuh/pull/29406))
-- Improved Wazuh-DB protocol to support large HTTP requests and remove pagination. ([#29514](https://github.com/wazuh/wazuh/pull/29514))
-- Added HTTP client implementation to wazuh-db. ([#29515](https://github.com/wazuh/wazuh/pull/29515))
-- Separated control messages from the connection handling in remoted. ([29153](https://github.com/wazuh/wazuh/pull/29153))
-- Added capability to re-index CVEs if documents have changed in Vulnerability detector. ([#29916](https://github.com/wazuh/wazuh/pull/29916))
+
+- Improved SCA and Syscheck decoders (backport from 4.11.0). ([#29633](https://github.com/wazuh/wazuh/pull/29633))
 
 ### Agent
 
-#### Added
-- Added support for Rocky Linux and AlmaLinux in the agent upgrade module. ([#29391](https://github.com/wazuh/wazuh/pull/29391))
-- Added handling of CentOS 9 SCA files in package specs. ([#29393](https://github.com/wazuh/wazuh-packages/pull/29393))
-- Added SCA support for Oracle Linux 10. ([#29139](https://github.com/wazuh/wazuh/pull/29139))
-
-#### Fixed
-- Fixed incorrect handling of events in the Custom logs bucket. ([#29312](https://github.com/wazuh/wazuh/pull/29312))
-- Fixed download Azure's blob race condition. ([29317](https://github.com/wazuh/wazuh/pull/29317))
-- Fixed FIM reports false files. ([#28962](https://github.com/wazuh/wazuh/pull/28962))
-- Fixed IPv6 address format reported by WindowsHelper. ([#29502](https://github.com/wazuh/wazuh/pull/29502))
-- Fixed hidden port detection and netstat availability handling. ([#29561](https://github.com/wazuh/wazuh/pull/29561))
-- Replaced `select()` with `sleep()` in Logcollector to prevent errors during Docker deployment. ([#29905](https://github.com/wazuh/wazuh/pull/29905))
-
-#### Changed
-- Improved agent synchronization to reduce redundant payload transfers. ([#29426](https://github.com/wazuh/wazuh/pull/29426))
-- Improved Syscollector to report only Python packages managed by `dpkg`. ([#28688](https://github.com/wazuh/wazuh/pull/28688))
-- Improved `wazuh-db` JSON handling performance by updating external dependencies. ([#29399](https://github.com/wazuh/wazuh/issues/29399))
-- Improved Azure module logging capabilities. ([#29930](https://github.com/wazuh/wazuh/pull/29930))
-- Improved restart on macOS agents after an upgrade. ([#29940](https://github.com/wazuh/wazuh/pull/29940))
-- Standarized different services timeouts. ([#29443](https://github.com/wazuh/wazuh/pull/29443))
-
-### RESTful API
-
-#### Added
-- Added the server uuid to the /manager/info endpoint. ([#29524](https://github.com/wazuh/wazuh/pull/29524))
-- Added support for hot ruleset reload in the related API endpoints. ([#29954](https://github.com/wazuh/wazuh/pull/29954))
-
 #### Fixed
 
-- Fixed false positive in configuration uploading. ([#28962](https://github.com/wazuh/wazuh/pull/28962))
-- Fixed sorting by version in agent list endpoint. ([#29166](https://github.com/wazuh/wazuh/pull/29166))
-
-### Ruleset
-
-#### Added
-
-- Added SCA content for CentOS Stream 9. ([#29269](https://github.com/wazuh/wazuh/pull/29269))
-- Added IOCs and rules for Wazuh 4.x ruleset improvement. ([#29653](https://github.com/wazuh/wazuh/pull/29653))
-- Added SCA content for Oracle Linux 10. ([#29139](https://github.com/wazuh/wazuh/pull/29139))
-- Added rule to minimize event flooding from Windows events on the Wazuh manager. ([#28790](https://github.com/wazuh/wazuh/pull/28790))
-
-#### Changed
-
-- Fixed bugs in Microsoft Windows 11 Enterprise SCA policy. ([#5648](https://github.com/wazuh/wazuh/pull/29221))
-- Fixed multiple checks in RHEL 9, RHEL 10, Rocky Linux 8 and Rocky Linux 9 SCA policies. ([#29040](https://github.com/wazuh/wazuh/pull/29040))
-- Fixed diff causing false negatives in rootcheck. ([#28982](https://github.com/wazuh/wazuh/pull/28982))
-- Fixed multiple RHEL 8 and CentOS 7 SCA checks generating incorrect results. ([#28711](https://github.com/wazuh/wazuh/pull/28711))
-
-### Other
-
-#### Changed
-- Updated Python dependencies: `setuptools`, `Jinja2`, and `PyJWT`. ([#29489](https://github.com/wazuh/wazuh/pull/29489))
-- Upgraded Python embedded interpreter to 3.10.16. ([#28646](https://github.com/wazuh/wazuh/pull/28646))
-- Upgraded h11 to 0.16.0 and httpcore to 1.0.9. ([#29735](https://github.com/wazuh/wazuh/pull/29735))
-- Removed unused Python Azure dependencies. ([#28564](https://github.com/wazuh/wazuh/pull/28564))
-
-
-## [v4.12.0]
-
-### Manager
-
-#### Added
-
-- Added new compilation flags for the Vulnerability Detector module. ([#26652](https://github.com/wazuh/wazuh/pull/26652))
-- Added support for central components in ARM architectures. ([#26083](https://github.com/wazuh/wazuh/issues/26083))
-- Added functionality to navigate to CTI links related to specific CVE detections from states and alerts. ([#28220](https://github.com/wazuh/wazuh/issues/28220))
-- Added package condition field in indexed vulnerabilities. ([#27603](https://github.com/wazuh/wazuh/pull/27603))
-
-#### Changed
-
-- Converted server logs timestamp to UTC. ([#28047](https://github.com/wazuh/wazuh/pull/28047))
-- Removed error logs when the response is 409 for certain OpenSearch calls. ([#28038](https://github.com/wazuh/wazuh/pull/28038))
-
-#### Fixed
-
-- Fixed inconsistent vulnerability severity categorization by correcting CVSS version prioritization. ([#26720](https://github.com/wazuh/wazuh/pull/26720))
-- Fixed a potential crash in Wazuh-DB by improving the PID parsing method. ([#26769](https://github.com/wazuh/wazuh/pull/26769))
-- Fixed concurrent mechanism on column family rocksDB. ([#28185](https://github.com/wazuh/wazuh/pull/28185))
-- Fixed unused variables in Analysisd. ([#28503](https://github.com/wazuh/wazuh/pull/28503))
-- Fixed analysisd startup failure caused by mixing static and dynamic rules with the same ID. ([#29050](https://github.com/wazuh/wazuh/pull/29050))
-- Fixed crash in Vulnerability Scanner when processing delayed events during agent re-scan. ([#27834](https://github.com/wazuh/wazuh/pull/27834))
-- Improved the signal handling during processes stop. ([#26679](https://github.com/wazuh/wazuh/pull/26679))
-- Improved cleanup logic for the content folder for the VD module. ([#27750](https://github.com/wazuh/wazuh/pull/27750))
-- Sanitized invalid size values from package data provider events. ([#27806](https://github.com/wazuh/wazuh/pull/27806))
-- Fixed crash when reading email alerts missing the `email_to` attribute. ([#26704](https://github.com/wazuh/wazuh/pull/26704))
-- Fixed offset errors by updating the DB only after processing events. ([#29179](https://github.com/wazuh/wazuh/pull/29179))
-
-### Agent
-
-#### Added
-
-- FIM now supports whodata using an eBPF-based integration. ([#27956](https://github.com/wazuh/wazuh/pull/27956))
-- Added support for the `riskDetections` relationship in MS Graph. ([#28416](https://github.com/wazuh/wazuh/pull/28416))
-
-#### Changed
-
-- Added a time delay option in the MS Graph integration to prevent log loss. ([#28389](https://github.com/wazuh/wazuh/pull/28389))
-- Added a page size option to the MS Graph integration. ([#28276](https://github.com/wazuh/wazuh/pull/28276))
-- Implemented Journald rotation detection in Logcollector. ([#28388](https://github.com/wazuh/wazuh/pull/28388))
-- Deleted the restriction for the use of the AWS profile in the Amazon Security Lake integration. ([#28149](https://github.com/wazuh/wazuh/pull/28149))
-- Removed `WARNING` prefix in logs from the CloudWatchLogs AWS integration. ([#27990](https://github.com/wazuh/wazuh/pull/27990))
-
-#### Fixed
-
-- Fixed a bug that could cause `wazuh-modulesd` to crash at startup. ([#26647](https://github.com/wazuh/wazuh/pull/26647))
-- Fixed incorrect UTF-8 character validation in FIM. Thanks to @zbalkan. ([#26289](https://github.com/wazuh/wazuh/pull/26289))
-- Improved URL validation in the Maltiverse integration. ([#27100](https://github.com/wazuh/wazuh/pull/27100))
-- Fixed an issue in Syscollector where package sizes were reported as negative. ([#28005](https://github.com/wazuh/wazuh/pull/28005))
-- Fixed an enrollment failure on Solaris 10 caused by unsupported socket timeout. ([#29161](https://github.com/wazuh/wazuh/pull/29161))
-- Fixed a memory issue in the `wazuh-agentd` argument parser. ([#29214](https://github.com/wazuh/wazuh/pull/29214))
-- Fixed WPK package upgrades for DEB when upgrading from version 4.3.11 or earlier. ([#28928](https://github.com/wazuh/wazuh/pull/28928))
-
-### Ruleset
-
-#### Added
-
-- Created SCA content for Distribution Independent Linux. ([#27749](https://github.com/wazuh/wazuh/pull/27749))
-- Created SCA policy for Ubuntu 24.04 LTS. ([#27253](https://github.com/wazuh/wazuh/pull/27253))
-- Added SCA content for CentOS Stream 10. ([#24495](https://github.com/wazuh/wazuh/issues/24495))
-- Added SCA content for Windows Server 2025. ([#26732](https://github.com/wazuh/wazuh/issues/26732))
-- Added SCA content for RHEL 10. ([#27752](https://github.com/wazuh/wazuh/pull/27752))
-- Added SCA content for AlmaLinux 10. ([#27998](https://github.com/wazuh/wazuh/pull/27998))
-
-#### Changed
-
-- Improved SCA rule for macOS 15. ([#27751](https://github.com/wazuh/wazuh/pull/27751))
-- Updated SCA Policy for Ubuntu 22.04 LTS to CIS Benchmark v2.0.0. ([#28466](https://github.com/wazuh/wazuh/pull/28466))
-- Fixed incorrect registry key in Windows Server 2022 SCA policy. ([#27911](https://github.com/wazuh/wazuh/pull/27911))
-- Fixed duplicated SCA check IDs for Windows Server 2025. ([#29204](https://github.com/wazuh/wazuh/pull/29204))
-- Fixed Ubuntu SCA checks to ensure nftables and iptables do not co-exist ([#27913](https://github.com/wazuh/wazuh/pull/27913))
-- Fixed errors in multiple checks in Rocky Linux 9 SCA checks ([#28468](https://github.com/wazuh/wazuh/pull/28468))
-- Fixed Ubuntu 24.04 SCA parsing error. ([#28379](https://github.com/wazuh/wazuh/pull/28379))
+- Fixed a bug that could cause `wazuh-modulesd` to crash at startup (backport from 4.12.0). ([#29598](https://github.com/wazuh/wazuh/pull/29598))
+- Fixed WPK package upgrades for DEB when upgrading from version 4.3.11 or earlier (backport from 4.12.0). ([#29600](https://github.com/wazuh/wazuh/pull/29600))
+- Fixed error in event processing on AWS Custom Logs Buckets module (backport from 4.11.0). ([#29635](https://github.com/wazuh/wazuh/pull/29635))
+- Improved URL validation in the Maltiverse integration (backport from 4.12.0). ([#29604](https://github.com/wazuh/wazuh/pull/29604))
 
 ### Other
 
 #### Changed
 
-- Upgraded the curl dependency to 8.11.0. ([#27614](https://github.com/wazuh/wazuh/pull/27614))
-- Upgraded the cryptography library dependency to version 44.0.1. ([#28298](https://github.com/wazuh/wazuh/pull/28298))
-- Upgraded python-multipart to 0.0.20, starlette to 0.42.0 and Werkzeug to 3.1.3. ([#27451](https://github.com/wazuh/wazuh/pull/27451))
-
-
-## [v4.11.2]
-
-### Manager
-
-#### Changed
-
-- Improved Wazuh DB performance using built-in types. ([#28797](https://github.com/wazuh/wazuh/pull/28797))
-
-### RESTful API
-
-#### Added
-
-- Added the `authentication_pool_size` option to customize the number of authentication processes in the Wazuh API configuration. ([#28653](https://github.com/wazuh/wazuh/pull/28653))
-
-
-## [v4.11.1]
-
-### Manager
-
-#### Fixed
-
-- Fixed the OS CPE build for package scans with data from Wazuh-DB. ([#28294](https://github.com/wazuh/wazuh/pull/28294))
-- Added delete by query logic when indexer is disabled. ([#28292](https://github.com/wazuh/wazuh/pull/28292))
-- Fixed heap buffer overflow in Analysisd rule parser. ([#28396](https://github.com/wazuh/wazuh/pull/28396))
-- Fixed unnecesary data copy during the curl calls. ([#28429](https://github.com/wazuh/wazuh/pull/28429))
-
-### Agent
-
-#### Fixed
-
-- Improved agent connectivity. ([#28339](https://github.com/wazuh/wazuh/pull/28339))
-
-#### Changed
-
-- Changed ms-graph page size to 50. ([#28075](https://github.com/wazuh/wazuh/pull/28075))
-- Removed "ca.com" domain filter from Rootcheck malware ruleset. ([#28045](https://github.com/wazuh/wazuh/pull/28045))
-
-
-## [v4.11.0]
-
-### Manager
-
-#### Fixed
-
-- Enabled inventory synchronization in Vulnerability Detector when the Indexer module is disabled. ([#26132](https://github.com/wazuh/wazuh/pull/26132))
-
-#### Added
-
-- Added CISA vulnerability content and prioritized over NVD in vulnerability scanner. ([#27692](https://github.com/wazuh/wazuh/pull/27692))
-
-#### Changed
-
-- Improved delimiters on XML. ([#27771](https://github.com/wazuh/wazuh/pull/27771))
-- Improved FIM decoder. ([#27893](https://github.com/wazuh/wazuh/pull/27893))
-- Improved SCA and Syscheck decoders. ([#27835](https://github.com/wazuh/wazuh/pull/27835))
-- Improved CISCAT decoder detection messages. ([#27914](https://github.com/wazuh/wazuh/pull/27914))
-- Changed ms-graph page size. ([#28195](https://github.com/wazuh/wazuh/pull/28195))
-
-### Agent
-
-#### Fixed
-
-- Fixed error in event processing on AWS Custom Logs Buckets module. ([#27739](https://github.com/wazuh/wazuh/pull/27739))
-
-#### Added
-
-- Improved Syscollector hotfix coverage on Windows by integrating WMI and WUA APIs. ([#26706](https://github.com/wazuh/wazuh/pull/26706))
-- Extended Syscollector capabilities to detect installed .pkg packages. ([#26782](https://github.com/wazuh/wazuh/pull/26782))
-
-#### Changed
-
-- Updated standard Python and NPM package location in Syscollector to align with common installation paths. ([#26236](https://github.com/wazuh/wazuh/pull/26236))
-
-### RESTful API
-
-#### Fixed
-
-- Added the `security:revoke` action to the `PUT /security/user/revoke` endpoint. ([#26255](https://github.com/wazuh/wazuh/pull/26255))
+- Upgraded python-multipart to 0.0.20, starlette to 0.42.0 and Werkzeug to 3.1.3 (backport from 4.12.0), h11 to 0.16.0 and httpcore to 1.0.9. ([#29669](https://github.com/wazuh/wazuh/pull/29669))
 
 
 ## [v4.10.1]
@@ -313,9 +87,9 @@ All notable changes to this project will be documented in this file.
 - Fixed errors on AIX 7.2 by adapting the blibpath variable. ([#26900](https://github.com/wazuh/wazuh/pull/26900))
 - Sanitized agent paths to prevent issues with parent folder references. ([#26944](https://github.com/wazuh/wazuh/pull/26944))
 - Fixed an issue in the DEB package that prevented the agent from restarting after an upgrade. ([#26633](https://github.com/wazuh/wazuh/pull/26633))
-- Improved file path handling in agent communications to avoid references to parent folders. ([#26944](https://github.com/wazuh/wazuh/pull/26944))
-- Set RPM package vendor to `UNKNOWN_VALUE` when the value is missing. ([#27054](https://github.com/wazuh/wazuh/pull/27054))
-- Updated Solaris package generation to use the correct `wazuh-packages` reference. ([#27059](https://github.com/wazuh/wazuh/issues/27059))
+- Improved file path handling in agent communications to avoid references to parent folders. ([#26944](https://github.com/wazuh/wazuh/pull/26944))  
+- Set RPM package vendor to `UNKNOWN_VALUE` when the value is missing. ([#27054](https://github.com/wazuh/wazuh/pull/27054))  
+- Updated Solaris package generation to use the correct `wazuh-packages` reference. ([#27059](https://github.com/wazuh/wazuh/issues/27059))  
 
 #### Changed
 
@@ -385,7 +159,7 @@ All notable changes to this project will be documented in this file.
 
 - Fixed vulnerability detector issue where RPM upgrade wouldn't download new content. ([#24909](https://github.com/wazuh/wazuh/pull/24909))
 - Fixed uncaught exception at Keystore test tool. ([#25667](https://github.com/wazuh/wazuh/pull/25667))
-- Replaced `eval` calls with `ast.literal_eval`. Thanks to @DanielFi. ([#25705](https://github.com/wazuh/wazuh/pull/25705))
+- Replaced `eval` calls with `ast.literal_eval`. ([#25705](https://github.com/wazuh/wazuh/pull/25705))
 - Fixed the cluster being disabled by default when loading configurations. ([#26277](https://github.com/wazuh/wazuh/pull/26277))
 - Added support ARM packages for wazuh-manager. ([#25945](https://github.com/wazuh/wazuh/pull/25945))
 
@@ -416,7 +190,7 @@ All notable changes to this project will be documented in this file.
 
 #### Fixed
 
-- Fixed requests logging to obtain the hash_auth_context from JWT tokens. ([#25764](https://github.com/wazuh/wazuh/pull/25764))
+- Fixed requests logging to obtain the hash_auth_context from JWT tokens. ([#25764](https://github.com/wazuh/wazuh/pull/25764)) 
 - Enabled API to listen IPV4 and IPV6 stacks. ([#25216](https://github.com/wazuh/wazuh/pull/25216))
 
 #### Changed

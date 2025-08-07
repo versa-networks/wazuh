@@ -16,7 +16,6 @@
 #include "sharedDefs.h"
 #include <functional>
 #include <map>
-#include <unordered_set>
 
 #if defined(HAS_STDFILESYSTEM) && HAS_STDFILESYSTEM==true
 #include "packages/packagesNPM.hpp"
@@ -25,7 +24,7 @@
 class PYPI
 {
     public:
-        void getPackages(const std::set<std::string>& /*paths*/, std::function<void(nlohmann::json&)> /*callback*/, const std::unordered_set<std::string>& /*excludePaths*/ = {});
+        void getPackages(const std::set<std::string>& /*paths*/, std::function<void(nlohmann::json&)> /*callback*/);
 };
 class NPM
 {
@@ -38,7 +37,7 @@ template <bool>
 class ModernFactoryPackagesCreator final
 {
     public:
-        static void getPackages(const std::map<std::string, std::set<std::string>>& /*paths*/, std::function<void(nlohmann::json&)> /*callback*/, const std::unordered_set<std::string>& /*excludePaths*/ = {})
+        static void getPackages(const std::map<std::string, std::set<std::string>>& /*paths*/, std::function<void(nlohmann::json&)> /*callback*/)
         {
         }
 };
@@ -49,11 +48,10 @@ template <>
 class ModernFactoryPackagesCreator<true> final
 {
     public:
-        static void getPackages(const std::map<std::string, std::set<std::string>>& paths, std::function<void(nlohmann::json&)> callback, const std::unordered_set<std::string>& excludePaths = {})
+        static void getPackages(const std::map<std::string, std::set<std::string>>& paths, std::function<void(nlohmann::json&)> callback)
         {
-            auto cbCopy {callback};
-            PYPI().getPackages(paths.at("PYPI"), std::move(callback), excludePaths);
-            NPM().getPackages(paths.at("NPM"), std::move(cbCopy));
+            PYPI().getPackages(paths.at("PYPI"), callback);
+            NPM().getPackages(paths.at("NPM"), callback);
         }
 };
 

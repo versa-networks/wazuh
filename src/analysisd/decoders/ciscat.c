@@ -35,20 +35,6 @@ void CiscatInit(){
     mdebug1("CiscatInit completed.");
 }
 
-void CiscatHotReload()
-{
-    if (ciscat_decoder)
-    {
-        ciscat_decoder->id = getDecoderfromlist(CISCAT_MOD, &os_analysisd_decoder_store);
-        ciscat_decoder->fts = 0;
-        mdebug1("CiscatHotReload completed.");
-    }
-    else
-    {
-        mdebug1("Ciscat decoder not initialized.");
-    }
-}
-
 /* Special decoder for CIS-CAT events */
 int DecodeCiscat(Eventinfo *lf, int *socket)
 {
@@ -87,9 +73,9 @@ int DecodeCiscat(Eventinfo *lf, int *socket)
     }
 
     // Detect message type
-    msg_type = cJSON_GetStringValue(cJSON_GetObjectItem(logJSON, "type"));
+    msg_type = cJSON_GetObjectItem(logJSON, "type")->valuestring;
     if (!msg_type) {
-        mdebug1("Invalid message. Type not found or not a string.");
+        mdebug1("Invalid message. Type not found.");
         cJSON_Delete(logJSON);
         return (0);
     }
@@ -122,19 +108,19 @@ int DecodeCiscat(Eventinfo *lf, int *socket)
                 wm_strcat(&msg, "NULL", ' ');
             }
 
-            if (scan_time && cJSON_IsString(scan_time)) {
+            if (scan_time) {
                 wm_strcat(&msg, scan_time->valuestring, '|');
             } else {
                 wm_strcat(&msg, "NULL", '|');
             }
 
-            if (benchmark && cJSON_IsString(benchmark)) {
+            if (benchmark) {
                 wm_strcat(&msg, benchmark->valuestring, '|');
             } else {
                 wm_strcat(&msg, "NULL", '|');
             }
 
-            if (profile && cJSON_IsString(profile)) {
+            if (profile) {
                 wm_strcat(&msg, profile->valuestring, '|');
             } else {
                 wm_strcat(&msg, "NULL", '|');
@@ -180,7 +166,7 @@ int DecodeCiscat(Eventinfo *lf, int *socket)
                 wm_strcat(&msg, "NULL", '|');
             }
 
-            if (score && cJSON_IsString(score)) {
+            if (score) {
                 char *endptr;
                 char _score[VAR_LENGTH];
                 int score_i = strtoul(score->valuestring, &endptr, 10);

@@ -5,8 +5,10 @@
 # Author: Daniel B. Cid <daniel.cid@gmail.com>
 
 ### Setting up variables
-VERSION="v$(awk -F'"' '/"version"[ \t]*:/ {print $4}' VERSION.json)"
-REVISION=$(awk -F'"' '/"stage"[ \t]*:/ {print $4}' VERSION.json)
+VERSION_FILE="./src/VERSION"
+REVISION_FILE="./src/REVISION"
+VERSION=`cat ${VERSION_FILE}`
+REVISION=`cat ${REVISION_FILE}`
 UNAME=`uname -snr`
 NUNAME=`uname`
 VUNAME=`uname -r`

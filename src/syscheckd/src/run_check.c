@@ -23,7 +23,6 @@
 #include "../os_crypto/md5_sha1_sha256/md5_sha1_sha256_op.h"
 #include "../rootcheck/rootcheck.h"
 #include "db/include/db.h"
-#include "ebpf/include/ebpf_whodata.h"
 
 #ifdef WAZUH_UNIT_TESTING
 unsigned int files_read = 0;
@@ -308,20 +307,9 @@ void start_daemon()
     }
 #endif
 
-    // Launch Whodata audit real-time thread
-    if (syscheck.enable_whodata && syscheck.whodata_provider == AUDIT_PROVIDER) {
+    // Launch Whodata real-time thread
+    if(syscheck.enable_whodata) {
         fim_whodata_initialize();
-    }
-
-    // Launch Whodata ebpf real-time thread
-    if (syscheck.enable_whodata && syscheck.whodata_provider == EBPF_PROVIDER) {
-#ifdef __linux__
-#ifdef ENABLE_AUDIT
-        w_create_thread(ebpf_whodata, NULL);
-#else
-        merror(FIM_ERROR_EBPF_NOT_SUPPORTED);
-#endif
-#endif
     }
 
     // Before entering in daemon mode itself
@@ -619,7 +607,9 @@ int fim_whodata_initialize() {
 
 #else
 int fim_whodata_initialize() {
-    mwarn(FIM_WARN_WHODATA_UNSUPPORTED);
+    if (syscheck.enable_whodata) {
+        mwarn(FIM_WARN_WHODATA_UNSUPPORTED);
+    }
     return -1;
 }
 #endif
@@ -758,7 +748,7 @@ STATIC void fim_link_update(const char *new_path, directory_t *configuration) {
     if (in_configuration == false) {
 #ifdef ENABLE_AUDIT
         // Remove the audit rule for the previous link only if the path is not configured in other entry.
-        if ((configuration->options & WHODATA_ACTIVE) && syscheck.whodata_provider == AUDIT_PROVIDER) {
+        if (configuration->options & WHODATA_ACTIVE) {
             remove_audit_rule_syscheck(configuration->symbolic_links);
         }
 #endif
@@ -772,7 +762,7 @@ STATIC void fim_link_update(const char *new_path, directory_t *configuration) {
             if (strcmp(new_path, dir_it->path) == 0) {
                 // We were monitoring a link, now we are monitoring the actual directory
 #ifdef ENABLE_AUDIT
-                if ((dir_it->options & WHODATA_ACTIVE) && syscheck.whodata_provider == AUDIT_PROVIDER) {
+                if (dir_it->options & WHODATA_ACTIVE) {
                     add_whodata_directory(dir_it->path);
                 }
 #endif
@@ -806,7 +796,7 @@ STATIC void fim_link_check_delete(directory_t *configuration) {
     if (w_stat(configuration->symbolic_links, &statbuf) < 0) {
         if (errno == ENOENT) {
 #ifdef ENABLE_AUDIT
-            if ((configuration->options & WHODATA_ACTIVE) && syscheck.whodata_provider == AUDIT_PROVIDER) {
+            if (configuration->options & WHODATA_ACTIVE) {
                 remove_audit_rule_syscheck(configuration->symbolic_links);
             }
 #endif
@@ -823,7 +813,7 @@ STATIC void fim_link_check_delete(directory_t *configuration) {
         fim_realtime_delete_watches(configuration);
 
 #ifdef ENABLE_AUDIT
-        if ((configuration->options & WHODATA_ACTIVE) && syscheck.whodata_provider == AUDIT_PROVIDER) {
+        if (configuration->options & WHODATA_ACTIVE) {
             remove_audit_rule_syscheck(configuration->symbolic_links);
         }
 #endif
@@ -858,7 +848,7 @@ STATIC void fim_link_silent_scan(const char *path, directory_t *configuration) {
 
     realtime_adddir(path, configuration);
 #ifdef ENABLE_AUDIT
-    if ((configuration->options & WHODATA_ACTIVE) && syscheck.whodata_provider == AUDIT_PROVIDER) {
+    if (configuration->options & WHODATA_ACTIVE) {
         // Just in case, we need to remove the configured directory if it was previously monitored
         remove_audit_rule_syscheck(configuration->path);
     }

@@ -100,7 +100,6 @@ def test_start_log_analytics(
         md5_hash=md5_hash,
         query=query,
         tag=tag,
-        tenant=tenant
     )
 
 
@@ -221,8 +220,7 @@ def test_get_log_analytics_events(mock_get, mock_position, mock_iter, mock_updat
     body = 'body'
     headers = 'headers'
     tag = 'test'
-    tenant = 'tenant'
-    get_log_analytics_events(url=url, body=body, headers=headers, md5_hash='', query=la_query, tag=tag, tenant=tenant)
+    get_log_analytics_events(url=url, body=body, headers=headers, md5_hash='', query=la_query, tag=tag)
     mock_get.assert_called_with(url, params=body, headers=headers, timeout=10)
     if rows is None or (len(rows) > 0 and time_position is None):
         mock_logging.assert_called_once()
@@ -242,7 +240,7 @@ def test_get_log_analytics_events_error_responses(mock_get):
     la_query = 'test_query'
     response_mock = MagicMock(status_code=400)
     mock_get.return_value = response_mock
-    get_log_analytics_events(url=None, body=None, headers=None, md5_hash=None, query=la_query, tag='', tenant='tenant')
+    get_log_analytics_events(url=None, body=None, headers=None, md5_hash=None, query=la_query, tag='')
     response_mock.raise_for_status.assert_called_once()
 
 

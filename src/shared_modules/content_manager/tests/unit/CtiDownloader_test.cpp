@@ -180,10 +180,7 @@ TEST_F(CtiDownloaderTest, BaseParametersDownloadWithRetryGenericServerError)
     const auto& lastQueryTimestamp {records.back().timestamp};
     const auto milliseconds {
         std::chrono::duration_cast<std::chrono::milliseconds>(lastQueryTimestamp - firstQueryTimestamp).count()};
-    auto minExpectedSleepTime = TOO_MANY_REQUESTS_RETRY_TIME_MS * 2;
-    // We accept a small margin of error in the sleep time.
-    minExpectedSleepTime *= 0.9;
-    EXPECT_GE(milliseconds, minExpectedSleepTime);
+    EXPECT_GE(milliseconds, TOO_MANY_REQUESTS_RETRY_TIME_MS * 2);
 }
 
 /**
@@ -221,10 +218,7 @@ TEST_F(CtiDownloaderTest, BaseParametersDownloadWithRetryTooManyRequestsError)
     const auto& lastQueryTimestamp {records.back().timestamp};
     const auto milliseconds {
         std::chrono::duration_cast<std::chrono::milliseconds>(lastQueryTimestamp - firstQueryTimestamp).count()};
-    auto minExpectedSleepTime = TOO_MANY_REQUESTS_RETRY_TIME_MS;
-    // We accept a small margin of error in the sleep time.
-    minExpectedSleepTime *= 0.9;
-    EXPECT_GE(milliseconds, minExpectedSleepTime);
+    EXPECT_GE(milliseconds, TOO_MANY_REQUESTS_RETRY_TIME_MS);
 }
 
 /**
@@ -263,10 +257,7 @@ TEST_F(CtiDownloaderTest, BaseParametersDownloadWithRetryDifferentErrors)
     const auto& lastQueryTimestamp {records.back().timestamp};
     const auto milliseconds {
         std::chrono::duration_cast<std::chrono::milliseconds>(lastQueryTimestamp - firstQueryTimestamp).count()};
-    auto minExpectedSleepTime = TOO_MANY_REQUESTS_RETRY_TIME_MS * 2 + GENERIC_ERROR_INITIAL_RETRY_TIME_MS;
-    // We accept a small margin of error in the sleep time.
-    minExpectedSleepTime *= 0.9;
-    EXPECT_GE(milliseconds, minExpectedSleepTime);
+    EXPECT_GE(milliseconds, TOO_MANY_REQUESTS_RETRY_TIME_MS * 2 + GENERIC_ERROR_INITIAL_RETRY_TIME_MS);
 }
 
 /**

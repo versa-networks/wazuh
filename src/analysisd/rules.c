@@ -98,8 +98,7 @@ void Rules_OP_CreateRules() {
 }
 
 int Rules_OP_ReadRules(const char *rulefile, RuleNode **r_node, ListNode **l_node,
-                       EventList **last_event_list, OSStore **decoder_list, OSList* log_msg,
-                       bool is_ar_link_enabled)
+                       EventList **last_event_list, OSStore **decoder_list, OSList* log_msg)
 {
     OS_XML xml;
     XML_NODE node = NULL;
@@ -1892,7 +1891,7 @@ int Rules_OP_ReadRules(const char *rulefile, RuleNode **r_node, ListNode **l_nod
             } /* end of elements block */
 
             /* Assign an active response to the rule if not logtest*/
-            if (is_ar_link_enabled) {
+            if (os_analysisd_rulelist == *r_node) {
                 Rule_AddAR(config_ruleinfo);
             }
 

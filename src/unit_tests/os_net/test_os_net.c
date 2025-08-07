@@ -132,7 +132,6 @@ void test_connect_TCP_ipv4(void **state) {
     test_struct_t *data  = (test_struct_t *)*state;
 
     will_return(__wrap_socket, 4);
-    will_return(__wrap_bind, 0);
     will_return(__wrap_connect, 0);
     will_return(__wrap_getsockopt, 0);
     will_return(__wrap_getsockopt, 0);
@@ -145,7 +144,6 @@ void test_connect_TCP_ipv6(void **state) {
     test_struct_t *data  = (test_struct_t *)*state;
 
     will_return(__wrap_socket, 3);
-    will_return(__wrap_bind, 0);
     will_return(__wrap_connect, 0);
     will_return(__wrap_getsockopt, 0);
     will_return(__wrap_getsockopt, 0);
@@ -158,7 +156,6 @@ void test_connect_TCP_ipv6_link_local_no_interface(void **state) {
     test_struct_t *data  = (test_struct_t *)*state;
 
     will_return(__wrap_socket, 3);
-    will_return(__wrap_bind, 0);
     will_return(__wrap_connect, 0);
     will_return(__wrap_getsockopt, 0);
     will_return(__wrap_getsockopt, 0);
@@ -173,7 +170,6 @@ void test_connect_TCP_ipv6_link_local_with_interface(void **state) {
     test_struct_t *data  = (test_struct_t *)*state;
 
     will_return(__wrap_socket, 3);
-    will_return(__wrap_bind, 0);
     will_return(__wrap_connect, 0);
     will_return(__wrap_getsockopt, 0);
     will_return(__wrap_getsockopt, 0);
@@ -324,7 +320,6 @@ void test_connect_UDP_ipv4(void **state) {
     test_struct_t *data  = (test_struct_t *)*state;
 
     will_return(__wrap_socket, 4);
-    will_return(__wrap_bind, 0);
     will_return(__wrap_connect, 0);
     will_return(__wrap_getsockopt, 0);
     will_return(__wrap_getsockopt, 0);
@@ -337,7 +332,6 @@ void test_connect_UDP_ipv6(void **state) {
     test_struct_t *data  = (test_struct_t *)*state;
 
     will_return(__wrap_socket, 4);
-    will_return(__wrap_bind, 0);
     will_return(__wrap_connect, 0);
     will_return(__wrap_getsockopt, 0);
     will_return(__wrap_getsockopt, 0);
@@ -350,7 +344,6 @@ void test_connect_UDP_ipv6_link_local_no_interface(void **state) {
     test_struct_t *data  = (test_struct_t *)*state;
 
     will_return(__wrap_socket, 3);
-    will_return(__wrap_bind, 0);
     will_return(__wrap_connect, 0);
     will_return(__wrap_getsockopt, 0);
     will_return(__wrap_getsockopt, 0);
@@ -365,7 +358,6 @@ void test_connect_UDP_ipv6_link_local_with_interface(void **state) {
     test_struct_t *data  = (test_struct_t *)*state;
 
     will_return(__wrap_socket, 3);
-    will_return(__wrap_bind, 0);
     will_return(__wrap_connect, 0);
     will_return(__wrap_getsockopt, 0);
     will_return(__wrap_getsockopt, 0);

@@ -34,44 +34,21 @@ private:
      */
     void cleanUp(const UpdaterContext& context) const
     {
-
-        logDebug1(WM_CONTENTUPDATER,
-                  "Cleaning up the folder: %s.",
-                  context.spUpdaterBaseContext->downloadsFolder.string().c_str());
+        // Get the path to the folder.
+        const auto& path = context.spUpdaterBaseContext->downloadsFolder;
 
         // Check if the path exists.
-        if (!std::filesystem::exists(context.spUpdaterBaseContext->downloadsFolder))
+        if (!std::filesystem::exists(path))
         {
-            logWarn(WM_CONTENTUPDATER,
-                    "The path does not exist: %s.",
-                    context.spUpdaterBaseContext->downloadsFolder.string().c_str());
+            logWarn(WM_CONTENTUPDATER, "The path does not exist: %s.", path.string().c_str());
             return;
         }
 
         // Delete the folder.
-        std::filesystem::remove_all(context.spUpdaterBaseContext->downloadsFolder);
+        std::filesystem::remove_all(path);
 
         // Create the folder again.
-        std::filesystem::create_directory(context.spUpdaterBaseContext->downloadsFolder);
-
-        logDebug1(WM_CONTENTUPDATER,
-                  "Cleaning up the folder: %s.",
-                  context.spUpdaterBaseContext->contentsFolder.string().c_str());
-
-        // Check if the path exists.
-        if (!std::filesystem::exists(context.spUpdaterBaseContext->contentsFolder))
-        {
-            logWarn(WM_CONTENTUPDATER,
-                    "The path does not exist: %s.",
-                    context.spUpdaterBaseContext->contentsFolder.string().c_str());
-            return;
-        }
-
-        // Delete the folder.
-        std::filesystem::remove_all(context.spUpdaterBaseContext->contentsFolder);
-
-        // Create the folder again.
-        std::filesystem::create_directory(context.spUpdaterBaseContext->contentsFolder);
+        std::filesystem::create_directory(path);
     }
 
 public:

@@ -32,8 +32,6 @@ constexpr auto MINIMAL_ELEMENTS_PER_BULK {5};
 
 constexpr auto HTTP_BAD_REQUEST {400};
 constexpr auto HTTP_CONTENT_LENGTH {413};
-constexpr auto HTTP_VERSION_CONFLICT {409};
-constexpr auto HTTP_TOO_MANY_REQUESTS {429};
 
 constexpr auto RECURSIVE_MAX_DEPTH {20};
 
@@ -57,8 +55,6 @@ constexpr auto SYNC_QUEUE_LIMIT = 4096;
 
 // Abuse control
 constexpr auto MINIMAL_SYNC_TIME {30}; // In minutes
-
-static std::mutex G_CREDENTIAL_MUTEX;
 
 static void mergeCaRootCertificates(const std::vector<std::string>& filePaths, std::string& caRootCertificate)
 {
@@ -118,6 +114,8 @@ static void initConfiguration(SecureCommunication& secureCommunication, const nl
     std::string caRootCertificate;
     std::string sslCertificate;
     std::string sslKey;
+    std::string username;
+    std::string password;
 
     if (config.contains("ssl"))
     {
@@ -148,11 +146,8 @@ static void initConfiguration(SecureCommunication& secureCommunication, const nl
         }
     }
 
-    // Basically we need to lock a global mutex, because the keystore::get method open the same database connection, and
-    // that action is not thread safe.
-    std::lock_guard lock(G_CREDENTIAL_MUTEX);
-    static auto username = Keystore::get(INDEXER_COLUMN, USER_KEY);
-    static auto password = Keystore::get(INDEXER_COLUMN, PASSWORD_KEY);
+    Keystore::get(INDEXER_COLUMN, USER_KEY, username);
+    Keystore::get(INDEXER_COLUMN, PASSWORD_KEY, password);
 
     if (username.empty() && password.empty())
     {
@@ -226,17 +221,15 @@ nlohmann::json IndexerConnector::getAgentDocumentsIds(const std::string& url,
     nlohmann::json postData;
     nlohmann::json responseJson;
     constexpr auto ELEMENTS_PER_QUERY {10000}; // The max value for queries is 10000 in the wazuh-indexer.
-    std::string scrollId;
 
     postData["query"]["match"]["agent.id"] = agentId;
     postData["size"] = ELEMENTS_PER_QUERY;
     postData["_source"] = nlohmann::json::array({"_id"});
 
     {
-        const auto onSuccess = [&responseJson, &scrollId](const std::string& response)
+        const auto onSuccess = [&responseJson](const std::string& response)
         {
             responseJson = nlohmann::json::parse(response);
-            scrollId = responseJson.at("_scroll_id").get_ref<const std::string&>();
         };
 
         const auto onError = [](const std::string& error, const long statusCode)
@@ -245,17 +238,17 @@ nlohmann::json IndexerConnector::getAgentDocumentsIds(const std::string& url,
             throw std::runtime_error(error);
         };
 
-        HTTPRequest::instance().post(
-            RequestParametersJson {.url = HttpURL(url + "/" + m_indexName + "/_search?scroll=1m"),
-                                   .data = postData,
-                                   .secureCommunication = secureCommunication},
-            PostRequestParameters {.onSuccess = onSuccess, .onError = onError},
-            ConfigurationParameters {});
+        HTTPRequest::instance().post(RequestParameters {.url = HttpURL(url + "/" + m_indexName + "/_search?scroll=1m"),
+                                                        .data = postData.dump(),
+                                                        .secureCommunication = secureCommunication},
+                                     PostRequestParameters {.onSuccess = onSuccess, .onError = onError},
+                                     ConfigurationParameters {});
     }
 
     // If the response have more than ELEMENTS_PER_QUERY elements, we need to scroll.
     if (responseJson.at("hits").at("total").at("value").get<int>() > ELEMENTS_PER_QUERY)
     {
+        const auto& scrollId = responseJson.at("_scroll_id").get_ref<const std::string&>();
         const auto scrollUrl = url + "/_search/scroll";
         const auto scrollData = R"({"scroll":"1m","scroll_id":")" + scrollId + "\"}";
 
@@ -282,25 +275,6 @@ nlohmann::json IndexerConnector::getAgentDocumentsIds(const std::string& url,
                                          ConfigurationParameters {});
         }
     }
-
-    // Delete the scroll id.
-    const auto deleteScrollUrl = url + "/_search/scroll/" + scrollId;
-
-    const auto onError = [&](const std::string& error, const long statusCode)
-    {
-        logError(IC_NAME, "%s, status code: %ld.", error.c_str(), statusCode);
-        // print payload
-        logError(IC_NAME, "Url: %s", deleteScrollUrl.c_str());
-    };
-    const auto onSuccess = [](const std::string& response)
-    {
-        logDebug2(IC_NAME, "Response: %s", response.c_str());
-    };
-
-    HTTPRequest::instance().delete_(
-        RequestParameters {.url = HttpURL(deleteScrollUrl), .secureCommunication = secureCommunication},
-        PostRequestParameters {.onSuccess = onSuccess, .onError = onError},
-        ConfigurationParameters {});
 
     return responseJson;
 }
@@ -361,16 +335,6 @@ void IndexerConnector::sendBulkReactive(const std::vector<std::pair<std::string,
 
                 sendBulkReactive(left, url, secureCommunication, depth + 1);
                 sendBulkReactive(right, url, secureCommunication, depth + 1);
-            }
-            else if (statusCode == HTTP_VERSION_CONFLICT)
-            {
-                logDebug2(IC_NAME, "Document version conflict, sync omitted.");
-                throw std::runtime_error("Document version conflict, sync omitted.");
-            }
-            else if (statusCode == HTTP_TOO_MANY_REQUESTS)
-            {
-                logDebug2(IC_NAME, "Too many requests, sync ommited.");
-                throw std::runtime_error("Too many requests, sync ommited.");
             }
             else
             {
@@ -469,16 +433,16 @@ void IndexerConnector::initialize(const nlohmann::json& templateData,
 
     // Initialize template.
     HTTPRequest::instance().put(
-        RequestParametersJson {.url = HttpURL(selector->getNext() + "/_index_template/" + m_indexName + "_template"),
-                               .data = templateData,
-                               .secureCommunication = secureCommunication},
+        RequestParameters {.url = HttpURL(selector->getNext() + "/_index_template/" + m_indexName + "_template"),
+                           .data = templateData,
+                           .secureCommunication = secureCommunication},
         PostRequestParameters {.onSuccess = onSuccess, .onError = onError},
         ConfigurationParameters {});
 
     // Initialize Index.
-    HTTPRequest::instance().put(RequestParametersJson {.url = HttpURL(selector->getNext() + "/" + m_indexName),
-                                                       .data = templateData.at("template"),
-                                                       .secureCommunication = secureCommunication},
+    HTTPRequest::instance().put(RequestParameters {.url = HttpURL(selector->getNext() + "/" + m_indexName),
+                                                   .data = templateData.at("template"),
+                                                   .secureCommunication = secureCommunication},
                                 PostRequestParameters {.onSuccess = onSuccess, .onError = onError},
                                 ConfigurationParameters {});
 
@@ -486,9 +450,9 @@ void IndexerConnector::initialize(const nlohmann::json& templateData,
     if (!updateMappingsData.empty())
     {
         HTTPRequest::instance().put(
-            RequestParametersJson {.url = HttpURL(selector->getNext() + "/" + m_indexName + "/_mapping"),
-                                   .data = updateMappingsData,
-                                   .secureCommunication = secureCommunication},
+            RequestParameters {.url = HttpURL(selector->getNext() + "/" + m_indexName + "/_mapping"),
+                               .data = updateMappingsData,
+                               .secureCommunication = secureCommunication},
             PostRequestParameters {.onSuccess = onSuccess, .onError = onError},
             ConfigurationParameters {});
     }
@@ -513,7 +477,7 @@ void IndexerConnector::preInitialization(
 
     if (Utils::haveUpperCaseCharacters(m_indexName))
     {
-        throw std::runtime_error("Index name must be lowercase: " + m_indexName);
+        throw std::runtime_error("Index name must be lowercase.");
     }
 
     m_db = std::make_unique<Utils::RocksDBWrapper>(std::string(DATABASE_BASE_PATH) + "db/" + m_indexName);
@@ -610,16 +574,12 @@ IndexerConnector::IndexerConnector(
 
                 if (operation.compare("DELETED") == 0)
                 {
-                    for (const auto& [key, _] : m_db->seek(id))
+                    logDebug2(IC_NAME, "Added document for deletion with id: %s.", id.c_str());
+                    if (!noIndex)
                     {
-                        logDebug2(IC_NAME, "Added document for deletion with id: %s.", key.c_str());
-                        if (!noIndex)
-                        {
-                            builderBulkDelete(bulkData, key, m_indexName);
-                        }
-
-                        m_db->delete_(key);
+                        builderBulkDelete(bulkData, id, m_indexName);
                     }
+                    m_db->delete_(id);
                 }
                 else if (operation.compare("DELETED_BY_QUERY") == 0)
                 {
@@ -729,21 +689,9 @@ IndexerConnector::IndexerConnector(
                                                      "indexer.");
                         }
                     }
-                    else if (statusCode == HTTP_VERSION_CONFLICT)
-                    {
-                        logDebug2(IC_NAME, "Document version conflict, retrying in 1 second.");
-                        throw std::runtime_error("Document version conflict, retrying in 1 second.");
-                    }
-                    else if (statusCode == HTTP_TOO_MANY_REQUESTS)
-                    {
-                        logDebug2(IC_NAME, "Too many requests, retrying in 1 second.");
-                        throw std::runtime_error("Too many requests, retrying in 1 second.");
-                    }
-                    else
-                    {
-                        logError(IC_NAME, "%s, status code: %ld.", error.c_str(), statusCode);
-                        throw std::runtime_error(error);
-                    }
+
+                    logError(IC_NAME, "%s, status code: %ld.", error.c_str(), statusCode);
+                    throw std::runtime_error(error);
                 };
 
                 HTTPRequest::instance().post(
@@ -855,27 +803,10 @@ IndexerConnector::IndexerConnector(
                 // We only sync the local DB when the indexer is disabled
                 if (parsedData.at("operation").get_ref<const std::string&>().compare("DELETED") == 0)
                 {
-                    for (const auto& [key, _] : m_db->seek(id))
-                    {
-                        m_db->delete_(key);
-                    }
-                }
-                // We made the same operation for DELETED_BY_QUERY as for DELETED
-                else if (parsedData.at("operation").get_ref<const std::string&>().compare("DELETED_BY_QUERY") == 0)
-                {
-                    for (const auto& [key, _] : m_db->seek(id))
-                    {
-                        m_db->delete_(key);
-                    }
+                    m_db->delete_(id);
                 }
                 else
                 {
-                    // If the data does not contain the required fields, log a warning and continue.
-                    if (!parsedData.contains("data"))
-                    {
-                        logWarn(IC_NAME, "Event required field (data) is missing required fields: %s", data.c_str());
-                        continue;
-                    }
                     const auto dataString = parsedData.at("data").dump();
                     m_db->put(id, dataString);
                 }

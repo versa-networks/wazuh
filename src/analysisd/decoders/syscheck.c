@@ -134,8 +134,6 @@ static fim_decoders_t *fim_decoders[] = {
 };
 OSHash *fim_agentinfo;
 
-OSList * g_decoder_thread_list = NULL; ///< List of decoders on threads
-
 // Initialize the necessary information to process the syscheck information
 // LCOV_EXCL_START
 int fim_init(void) {
@@ -159,48 +157,8 @@ int fim_init(void) {
     fim_decoders[REGISTRY_VALUE_DECODER]->modify_name = FIM_REG_VAL_MOD;
     fim_decoders[REGISTRY_VALUE_DECODER]->delete_id = getDecoderfromlist(FIM_REG_VAL_DEL, &os_analysisd_decoder_store);
     fim_decoders[REGISTRY_VALUE_DECODER]->delete_name = FIM_REG_VAL_DEL;
-    if (fim_agentinfo == NULL) {
-        return 0;
-    }
-
-    // Create registry for decoders used in threads (For hotreload)
-    g_decoder_thread_list = OSList_Create();
-    if (g_decoder_thread_list == NULL) {
-        merror("Error creating the list of decoder info threads");
-        return 0;
-    }
-
+    if (fim_agentinfo == NULL) return 0;
     return 1;
-}
-
-void fim_hot_reload(void) {
-    if (fim_agentinfo) {
-        fim_decoders[FILE_DECODER]->add_id = getDecoderfromlist(FIM_NEW, &os_analysisd_decoder_store);
-        fim_decoders[FILE_DECODER]->modify_id = getDecoderfromlist(FIM_MOD, &os_analysisd_decoder_store);
-        fim_decoders[FILE_DECODER]->delete_id = getDecoderfromlist(FIM_DEL, &os_analysisd_decoder_store);
-        fim_decoders[REGISTRY_KEY_DECODER]->add_id = getDecoderfromlist(FIM_REG_KEY_NEW, &os_analysisd_decoder_store);
-        fim_decoders[REGISTRY_KEY_DECODER]->modify_id = getDecoderfromlist(FIM_REG_KEY_MOD, &os_analysisd_decoder_store);
-        fim_decoders[REGISTRY_KEY_DECODER]->delete_id = getDecoderfromlist(FIM_REG_KEY_DEL, &os_analysisd_decoder_store);
-        fim_decoders[REGISTRY_VALUE_DECODER]->add_id = getDecoderfromlist(FIM_REG_VAL_NEW, &os_analysisd_decoder_store);
-        fim_decoders[REGISTRY_VALUE_DECODER]->modify_id = getDecoderfromlist(FIM_REG_VAL_MOD, &os_analysisd_decoder_store);
-        fim_decoders[REGISTRY_VALUE_DECODER]->delete_id = getDecoderfromlist(FIM_REG_VAL_DEL, &os_analysisd_decoder_store);
-
-        // Reload local thread decoders
-        OSListNode * node = OSList_GetFirstNode(g_decoder_thread_list);
-        while (node && node->data) {
-            OSDecoderInfo * fim_decoder = node->data;
-            fim_decoder->id = getDecoderfromlist(FIM_MOD, &os_analysisd_decoder_store);
-            node = OSList_GetNextNode(g_decoder_thread_list);
-        }
-        mdebug1("FIM hotreload decoder completed.");
-    } else {
-        mdebug1("FIM decoder not initialized.");
-    }
-}
-
-void w_hotreload_fim_registry_decoder(OSDecoderInfo * fim_decoder) {
-    assert(fim_decoder != NULL);
-    OSList_AddData(g_decoder_thread_list, fim_decoder);
 }
 
 // Initialize the necessary information to process the syscheck information
@@ -603,6 +561,7 @@ exit_fail:
 int fim_alert (char *f_name, sk_sum_t *oldsum, sk_sum_t *newsum, Eventinfo *lf, _sdb *localsdb, syscheck_event_t event_type) {
     int changes = 0;
     char msg_type[OS_FLSIZE];
+    char buf_ptr[26];
 
     if (event_type == FIM_DELETED) {
         snprintf(msg_type, sizeof(msg_type), "was deleted.");
@@ -704,8 +663,7 @@ int fim_alert (char *f_name, sk_sum_t *oldsum, sk_sum_t *newsum, Eventinfo *lf, 
             }
         }
         /* MD5 message */
-        if (newsum->md5 == NULL || newsum->md5[0] == '\0' || oldsum->md5 == NULL || oldsum->md5[0] == '\0'
-            || strcmp(newsum->md5, oldsum->md5) == 0) {
+        if (!*newsum->md5 || !*oldsum->md5 || strcmp(newsum->md5, oldsum->md5) == 0) {
             localsdb->md5[0] = '\0';
         } else {
             changes = 1;
@@ -716,8 +674,7 @@ int fim_alert (char *f_name, sk_sum_t *oldsum, sk_sum_t *newsum, Eventinfo *lf, 
         }
 
         /* SHA-1 message */
-        if (newsum->sha1 == NULL || newsum->sha1[0] == '\0' || oldsum->sha1 == NULL || oldsum->sha1[0] == '\0'
-            || strcmp(newsum->sha1, oldsum->sha1) == 0) {
+        if (!*newsum->sha1 || !*oldsum->sha1 || strcmp(newsum->sha1, oldsum->sha1) == 0) {
             localsdb->sha1[0] = '\0';
         } else {
             changes = 1;
@@ -752,21 +709,15 @@ int fim_alert (char *f_name, sk_sum_t *oldsum, sk_sum_t *newsum, Eventinfo *lf, 
         if (oldsum->mtime && newsum->mtime && oldsum->mtime != newsum->mtime) {
             changes = 1;
             wm_strcat(&lf->fields[FIM_CHFIELDS].value, "mtime", ',');
-            lf->fields[FIM_MTIME_BEFORE].value = w_long_str(oldsum->mtime);
+            char *old_ctime = strdup(ctime_r(&oldsum->mtime, buf_ptr));
+            char *new_ctime = strdup(ctime_r(&newsum->mtime, buf_ptr));
+            old_ctime[strlen(old_ctime) - 1] = '\0';
+            new_ctime[strlen(new_ctime) - 1] = '\0';
 
-            char ctime_old_buffer[sizeof("Wed Jun 30 21:49:08 1993\n")] = {0};
-            char ctime_new_buffer[sizeof("Wed Jun 30 21:49:08 1993\n")] = {0};
-            char* old_ctime = ctime_r(&oldsum->mtime, ctime_old_buffer);
-            char* new_ctime = ctime_r(&newsum->mtime, ctime_new_buffer);
-            if (old_ctime == NULL || new_ctime == NULL) {
-                mdebug1("Error converting modification time '%ld' - '%ld'", oldsum->mtime, newsum->mtime);
-                old_ctime = new_ctime = "Unknown";
-            } else {
-                old_ctime[strlen(old_ctime) - 1] = '\0';
-                new_ctime[strlen(new_ctime) - 1] = '\0';
-            }
-            snprintf(localsdb->mtime, OS_FLSIZE, "Old modification time was: '%s', now it is '%s'\n",
-                     old_ctime, new_ctime);
+            snprintf(localsdb->mtime, OS_FLSIZE, "Old modification time was: '%s', now it is '%s'\n", old_ctime, new_ctime);
+            lf->fields[FIM_MTIME_BEFORE].value = w_long_str(oldsum->mtime);
+            os_free(old_ctime);
+            os_free(new_ctime);
         } else {
             localsdb->mtime[0] = '\0';
         }
@@ -1658,11 +1609,6 @@ static int fim_generate_alert(Eventinfo *lf, syscheck_event_t event_type, cJSON 
             snprintf(path_buffer, 757, "%s %s", lf->fields[FIM_REGISTRY_ARCH].value, lf->fields[FIM_FILE].value);
         }
     } else if (strcmp("registry_value", lf->fields[FIM_ENTRY_TYPE].value) == 0) {
-
-        if (lf->fields[FIM_REGISTRY_VALUE_NAME].value == NULL) {
-            w_strdup("Unknown key:Unknown Value", lf->fields[FIM_REGISTRY_VALUE_NAME].value);
-        }
-
         int value_len = strlen(lf->fields[FIM_REGISTRY_VALUE_NAME].value);
         entry_type = ENTRY_TYPE_REGISTRY_VALUE;
 
@@ -1752,6 +1698,9 @@ int fim_fetch_attributes(cJSON *new_attrs, cJSON *old_attrs, Eventinfo *lf) {
 
 int fim_fetch_attributes_state(cJSON *attr, Eventinfo *lf, char new_state) {
     cJSON *attr_it;
+    long aux_time;
+    char *time_string = NULL;
+    char buf_ptr[26];
 
     assert(lf != NULL);
     assert(lf->fields != NULL);
@@ -1777,6 +1726,9 @@ int fim_fetch_attributes_state(cJSON *attr, Eventinfo *lf, char new_state) {
                     lf->fields[FIM_INODE_BEFORE].value = w_long_str((long) attr_it->valuedouble);;
                 }
             } else if (strcmp(attr_it->string, "mtime") == 0) {
+                aux_time = (long) attr_it->valuedouble;
+                time_string = ctime_r(&aux_time, buf_ptr);
+                time_string[strlen(time_string) - 1] = '\0';
                 if (new_state) {
                     lf->fields[FIM_MTIME].value = w_long_str((long) attr_it->valuedouble);
                 } else {

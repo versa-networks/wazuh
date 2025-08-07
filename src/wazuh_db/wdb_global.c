@@ -927,74 +927,6 @@ int wdb_global_delete_agent_belong(wdb_t *wdb, int id) {
     return wdb_exec_stmt_silent(stmt);
 }
 
-char *wdb_global_validate_sync_status(wdb_t *wdb, int id, const char *requested_sync_status) {
-    char *old_sync_status = wdb_global_get_sync_status(wdb, id);
-
-    if (!old_sync_status) {
-        merror("Failed to get old sync_status for agent '%d'", id);
-        // If we can't validate, allow the requested one by duplicating it
-        char *fallback = NULL;
-        os_strdup(requested_sync_status, fallback);
-        return fallback;
-    }
-
-    bool allowed = false;
-
-    if (strcmp(old_sync_status, "synced") == 0 || strcmp(old_sync_status, "syncreq_keepalive") == 0) {
-        allowed = true;
-    } else if (strcmp(old_sync_status, "syncreq_status") == 0) {
-        allowed = strcmp(requested_sync_status, "syncreq_keepalive") != 0;
-    } else if (strcmp(old_sync_status, "syncreq") == 0) {
-        allowed = strcmp(requested_sync_status, "syncreq_keepalive") != 0 &&
-                  strcmp(requested_sync_status, "syncreq_status") != 0;
-    }
-
-    char *final_sync_status = NULL;
-
-    if (allowed) {
-        os_strdup(requested_sync_status, final_sync_status);
-    } else {
-        os_strdup(old_sync_status, final_sync_status);
-    }
-
-    os_free(old_sync_status);
-    return final_sync_status;
-}
-
-char * wdb_global_get_sync_status(wdb_t *wdb, int id) {
-    sqlite3_stmt *stmt = NULL;
-    char *sync_status = NULL;
-
-    if (!wdb->transaction && wdb_begin2(wdb) < 0) {
-        mdebug1("Cannot begin transaction");
-        return NULL;
-    }
-
-    if (wdb_stmt_cache(wdb, WDB_STMT_GLOBAL_SYNC_GET) < 0) {
-        mdebug1("Cannot cache statement");
-        return NULL;
-    }
-
-    stmt = wdb->stmt[WDB_STMT_GLOBAL_SYNC_GET];
-
-    if (sqlite3_bind_int(stmt, 1, id) != SQLITE_OK) {
-        merror("DB(%s) sqlite3_bind_int(): %s", wdb->id, sqlite3_errmsg(wdb->db));
-        return NULL;
-    }
-
-    int step = wdb_step(stmt);
-    if (step == SQLITE_ROW) {
-        const unsigned char *text = sqlite3_column_text(stmt, 0);
-        if (text) {
-            os_strdup((const char *)text, sync_status);
-        }
-    } else if (step != SQLITE_DONE) {
-        mdebug1("sqlite3_step(): %s", sqlite3_errmsg(wdb->db));
-    }
-
-    return sync_status;
-}
-
 int wdb_global_set_sync_status(wdb_t *wdb, int id, const char* sync_status) {
     sqlite3_stmt *stmt = NULL;
 
@@ -1039,100 +971,79 @@ wdbc_result wdb_global_sync_agent_info_get(wdb_t *wdb, int* last_agent_id, char 
     //Add array start
     *response_aux++ = '[';
 
-    int stmts[] = {
-        WDB_STMT_GLOBAL_SYNC_REQ_FULL_GET,
-        WDB_STMT_GLOBAL_SYNC_REQ_STATUS_GET,
-        WDB_STMT_GLOBAL_SYNC_REQ_KEEPALIVE_GET
-    };
-
-    int initial_agent_id = *last_agent_id;
-
-    for (size_t i = 0; i < sizeof(stmts)/sizeof(*stmts); ++i) {
-        int stmt_id = stmts[i];
-
-        *last_agent_id = initial_agent_id;
-        status = WDBC_UNKNOWN;
-
-        while (status == WDBC_UNKNOWN) {
-            //Prepare SQL query
-            if (wdb_stmt_cache(wdb, stmt_id) < 0) {
-                mdebug1("Cannot cache statement");
-                snprintf(*output, WDB_MAX_RESPONSE_SIZE, "%s", "Cannot cache statement");
-                status = WDBC_ERROR;
-                break;
-            }
-            agent_stmt = wdb->stmt[stmt_id];
-            if (sqlite3_bind_int(agent_stmt, 1, *last_agent_id) != SQLITE_OK) {
-                merror("DB(%s) sqlite3_bind_int(): %s", wdb->id, sqlite3_errmsg(wdb->db));
-                snprintf(*output, WDB_MAX_RESPONSE_SIZE, "%s", "Cannot bind sql statement");
-                status = WDBC_ERROR;
-                break;
-            }
-
-            //Get agent info
-            cJSON* sql_agents_response = wdb_exec_stmt(agent_stmt);
-            if (sql_agents_response && sql_agents_response->child) {
-                cJSON* json_agent = sql_agents_response->child;
-                cJSON* json_id = cJSON_GetObjectItem(json_agent, "id");
-                if (cJSON_IsNumber(json_id)) {
-                    //Get ID
-                    int agent_id = json_id->valueint;
-
-                    if (stmt_id == WDB_STMT_GLOBAL_SYNC_REQ_FULL_GET) {
-                        //Get labels if any
-                        cJSON* json_labels = wdb_global_get_agent_labels(wdb, agent_id);
-                        if (json_labels) {
-                            if (json_labels->child) {
-                                cJSON_AddItemToObject(json_agent, "labels", json_labels);
-                            }
-                            else {
-                                cJSON_Delete(json_labels);
-                            }
-                        }
-                    }
-
-                    //Print Agent info
-                    char *agent_str = cJSON_PrintUnformatted(json_agent);
-                    unsigned agent_len = strlen(agent_str);
-
-                    //Check if new agent fits in response
-                    if (response_size+agent_len+1 < WDB_MAX_RESPONSE_SIZE) {
-                        //Add new agent
-                        memcpy(response_aux, agent_str, agent_len);
-                        response_aux+=agent_len;
-                        //Add separator
-                        *response_aux++ = ',';
-                        //Save size and last ID
-                        response_size += agent_len+1;
-                        *last_agent_id = agent_id;
-                        //Set sync status as synced
-                        if (OS_SUCCESS != wdb_global_set_sync_status(wdb, agent_id, "synced")) {
-                            merror("Cannot set sync_status for agent %d", agent_id);
-                            snprintf(*output, WDB_MAX_RESPONSE_SIZE, "%s %d", "Cannot set sync_status for agent", agent_id);
-                            status = WDBC_ERROR;
-                        }
-                    }
-                    else {
-                        //Pending agents but buffer is full
-                        status = WDBC_DUE;
-                    }
-                    os_free(agent_str);
-                }
-                else {
-                    //Continue with the next agent
-                    (*last_agent_id)++;
-                }
-            }
-            else {
-                //All agents have been obtained
-                status = WDBC_OK;
-            }
-            cJSON_Delete(sql_agents_response);
-        }
-
-        if (status == WDBC_ERROR || status == WDBC_DUE) {
+    while (status == WDBC_UNKNOWN) {
+        //Prepare SQL query
+        if (wdb_stmt_cache(wdb, WDB_STMT_GLOBAL_SYNC_REQ_GET) < 0) {
+            mdebug1("Cannot cache statement");
+            snprintf(*output, WDB_MAX_RESPONSE_SIZE, "%s", "Cannot cache statement");
+            status = WDBC_ERROR;
             break;
         }
+        agent_stmt = wdb->stmt[WDB_STMT_GLOBAL_SYNC_REQ_GET];
+        if (sqlite3_bind_int(agent_stmt, 1, *last_agent_id) != SQLITE_OK) {
+            merror("DB(%s) sqlite3_bind_int(): %s", wdb->id, sqlite3_errmsg(wdb->db));
+            snprintf(*output, WDB_MAX_RESPONSE_SIZE, "%s", "Cannot bind sql statement");
+            status = WDBC_ERROR;
+            break;
+        }
+
+        //Get agent info
+        cJSON* sql_agents_response = wdb_exec_stmt(agent_stmt);
+        if (sql_agents_response && sql_agents_response->child) {
+            cJSON* json_agent = sql_agents_response->child;
+            cJSON* json_id = cJSON_GetObjectItem(json_agent, "id");
+            if (cJSON_IsNumber(json_id)) {
+                //Get ID
+                int agent_id = json_id->valueint;
+
+                //Get labels if any
+                cJSON* json_labels = wdb_global_get_agent_labels(wdb, agent_id);
+                if (json_labels) {
+                    if (json_labels->child) {
+                        cJSON_AddItemToObject(json_agent, "labels", json_labels);
+                    }
+                    else {
+                        cJSON_Delete(json_labels);
+                    }
+                }
+
+                //Print Agent info
+                char *agent_str = cJSON_PrintUnformatted(json_agent);
+                unsigned agent_len = strlen(agent_str);
+
+                //Check if new agent fits in response
+                if (response_size+agent_len+1 < WDB_MAX_RESPONSE_SIZE) {
+                    //Add new agent
+                    memcpy(response_aux, agent_str, agent_len);
+                    response_aux+=agent_len;
+                    //Add separator
+                    *response_aux++ = ',';
+                    //Save size and last ID
+                    response_size += agent_len+1;
+                    *last_agent_id = agent_id;
+                    //Set sync status as synced
+                    if (OS_SUCCESS != wdb_global_set_sync_status(wdb, agent_id, "synced")) {
+                        merror("Cannot set sync_status for agent %d", agent_id);
+                        snprintf(*output, WDB_MAX_RESPONSE_SIZE, "%s %d", "Cannot set sync_status for agent", agent_id);
+                        status = WDBC_ERROR;
+                    }
+                }
+                else {
+                    //Pending agents but buffer is full
+                    status = WDBC_DUE;
+                }
+                os_free(agent_str);
+            }
+            else {
+                //Continue with the next agent
+                (*last_agent_id)++;
+            }
+        }
+        else {
+            //All agents have been obtained
+            status = WDBC_OK;
+        }
+        cJSON_Delete(sql_agents_response);
     }
 
     if (status != WDBC_ERROR) {
@@ -1143,50 +1054,21 @@ wdbc_result wdb_global_sync_agent_info_get(wdb_t *wdb, int* last_agent_id, char 
         //Add array end
         *response_aux = ']';
     }
-
     return status;
 }
 
 char* wdb_global_calculate_agent_group_csv(wdb_t *wdb, int id) {
+    cJSON* j_agent_groups = wdb_global_select_group_belong(wdb, id);
     char* result = NULL;
-    sqlite3_stmt *stmt = NULL;
-
-    if (!wdb->transaction && wdb_begin2(wdb) < 0) {
-        mdebug1("Cannot begin transaction");
-        return NULL;
-    }
-
-    if (wdb_stmt_cache(wdb, WDB_STMT_GLOBAL_SELECT_GROUP_BELONG) < 0) {
-        mdebug1("Cannot cache statement");
-        return NULL;
-    }
-
-    stmt = wdb->stmt[WDB_STMT_GLOBAL_SELECT_GROUP_BELONG];
-
-    if (sqlite3_bind_int(stmt, 1, id) != SQLITE_OK) {
-        merror("DB(%s) sqlite3_bind_int(): %s", wdb->id, sqlite3_errmsg(wdb->db));
-        return NULL;
-    }
-
-    int _status = SQLITE_ROW;
-
-    while ((_status = wdb_step(stmt)) == SQLITE_ROW) {
-        char * group_hash = (char *) sqlite3_column_text(stmt, 0);
-
-        if (group_hash == NULL) {
-            mdebug1("Group hash is NULL");
-            continue;
+    if (j_agent_groups) {
+        cJSON* j_group_name = NULL;
+        cJSON_ArrayForEach(j_group_name, j_agent_groups) {
+            wm_strcat(&result, cJSON_GetStringValue(j_group_name), MULTIGROUP_SEPARATOR);
         }
-
-        if (result != NULL && WDB_MAX_RESPONSE_SIZE < strlen(result) + strlen(group_hash) + 1) {
-            mdebug1("The agent's groups exceed the socket maximum response size.");
-            break;
-        }
-        wm_strcat(&result, group_hash, MULTIGROUP_SEPARATOR);
+        cJSON_Delete(j_agent_groups);
     }
-
-    if (SQLITE_DONE != _status) {
-        mdebug1("SQL statement execution failed");
+    else {
+        mdebug1("Unable to get groups of agent '%03d'", id);
     }
     return result;
 }
@@ -1525,7 +1407,7 @@ int wdb_global_recalculate_agent_groups_hash(wdb_t* wdb, int agent_id, char* syn
     return result;
 }
 
-int wdb_global_recalculate_agent_groups_hash_without_sync_status(wdb_t* wdb, int agent_id, char* group) {
+int wdb_global_recalculate_agent_groups_hash_without_sync_status(wdb_t* wdb, int agent_id) {
     int result = WDBC_OK;
     char* agent_groups_csv = wdb_global_calculate_agent_group_csv(wdb, agent_id);
     char groups_hash[WDB_GROUP_HASH_SIZE+1] = {0};
@@ -1536,12 +1418,9 @@ int wdb_global_recalculate_agent_groups_hash_without_sync_status(wdb_t* wdb, int
         mdebug1("No groups in belongs table for agent '%03d'", agent_id);
     }
 
-    // if the previous group is different from the new one, we update the agent group context
-    if ((group && !agent_groups_csv) || (!group && agent_groups_csv) || (group && agent_groups_csv && strcmp(group, agent_groups_csv))) {
-        if (WDBC_ERROR == wdb_global_set_agent_group_hash(wdb, agent_id, agent_groups_csv, agent_groups_csv ? groups_hash : NULL)) {
-            result = WDBC_ERROR;
-            merror("There was an error assigning the groups hash to agent '%03d'", agent_id);
-        }
+    if (WDBC_ERROR == wdb_global_set_agent_group_hash(wdb, agent_id, agent_groups_csv, agent_groups_csv ? groups_hash : NULL)) {
+        result = WDBC_ERROR;
+        merror("There was an error assigning the groups hash to agent '%03d'", agent_id);
     }
 
     os_free(agent_groups_csv);
@@ -1558,11 +1437,11 @@ int wdb_global_recalculate_all_agent_groups_hash(wdb_t* wdb) {
         return OS_INVALID;
     }
 
-    if (wdb_stmt_cache(wdb, WDB_STMT_GLOBAL_GET_AGENTS_AND_GROUP) < 0) {
+    if (wdb_stmt_cache(wdb, WDB_STMT_GLOBAL_GET_AGENTS) < 0) {
         mdebug1("Cannot cache statement");
         return OS_INVALID;
     }
-    sqlite3_stmt* stmt = wdb->stmt[WDB_STMT_GLOBAL_GET_AGENTS_AND_GROUP];
+    sqlite3_stmt* stmt = wdb->stmt[WDB_STMT_GLOBAL_GET_AGENTS];
 
     if (sqlite3_bind_int(stmt, 1, 0) != SQLITE_OK) {
         merror("DB(%s) sqlite3_bind_int(): %s", wdb->id, sqlite3_errmsg(wdb->db));
@@ -1570,21 +1449,24 @@ int wdb_global_recalculate_all_agent_groups_hash(wdb_t* wdb) {
     }
 
     //Get agents to recalculate hash
-    int _status = SQLITE_ROW;
-
-    while ((_status = wdb_step(stmt)) == SQLITE_ROW) {
-        int id = sqlite3_column_int(stmt, 0);
-        char * group = (char *) sqlite3_column_text(stmt, 1);
-
-        if (WDBC_ERROR == wdb_global_recalculate_agent_groups_hash_without_sync_status(wdb, id, group)) {
-            merror("Couldn't recalculate hash group for agent: '%03d'", id);
+    cJSON* j_stmt_result = wdb_exec_stmt(stmt);
+    cJSON* agent = NULL;
+    cJSON_ArrayForEach(agent, j_stmt_result) {
+        cJSON* id = cJSON_GetObjectItem(agent, "id");
+        if (cJSON_IsNumber(id)) {
+            if (WDBC_ERROR == wdb_global_recalculate_agent_groups_hash_without_sync_status(wdb, id->valueint)) {
+                merror("Couldn't recalculate hash group for agent: '%03d'", id->valueint);
+                cJSON_Delete(j_stmt_result);
+                return OS_INVALID;
+            }
+        }
+        else {
+            merror("Invalid element returned by get all agents query");
+            cJSON_Delete(j_stmt_result);
             return OS_INVALID;
         }
     }
-
-    if (SQLITE_DONE != _status) {
-        mdebug1("SQL statement execution failed");
-    }
+    cJSON_Delete(j_stmt_result);
 
     return OS_SUCCESS;
 }

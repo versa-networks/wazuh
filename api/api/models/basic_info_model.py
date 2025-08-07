@@ -13,7 +13,7 @@ from api import util
 
 class BasicInfo(Model):
 
-    def __init__(self, title: str = None, api_version: str = None, revision: str = None, license_name: str = None,
+    def __init__(self, title: str = None, api_version: str = None, revision: int = None, license_name: str = None,
                  license_url: str = None, hostname: str = None, timestamp:  str = None):
         """BasicInfo - a model defined in Swagger
 
@@ -41,7 +41,7 @@ class BasicInfo(Model):
         self.swagger_types = {
             'title': str,
             'api_version': str,
-            'revision': str,
+            'revision': int,
             'license_name': str,
             'license_url': str,
             'hostname': str,
@@ -114,20 +114,20 @@ class BasicInfo(Model):
         self._api_version = api_version
 
     @property
-    def revision(self) -> str:
+    def revision(self) -> int:
         """Gets the revision of this BasicInfo.
 
         :return: The revision of this BasicInfo.
-        :rtype: str
+        :rtype: int
         """
         return self._revision
 
     @revision.setter
-    def revision(self, revision: str):
+    def revision(self, revision: int):
         """Sets the revision of this BasicInfo.
 
         :param revision: The revision of this BasicInfo.
-        :type revision: str
+        :type revision: int
             """
         self._revision = revision
 

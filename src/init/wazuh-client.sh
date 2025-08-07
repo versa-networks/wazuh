@@ -11,8 +11,8 @@ PWD=`pwd`
 DIR=`dirname $PWD`;
 
 # Installation info
-VERSION="v5.0.0"
-REVISION="alpha0"
+VERSION="v4.10.2"
+REVISION="41021"
 TYPE="agent"
 
 ###  Do not modify below here ###
@@ -31,7 +31,7 @@ LOCK_PID="${LOCK}/pid"
 # to 10 attempts (or 10 seconds) to execute.
 MAX_ITERATION="60"
 
-MAX_KILL_TRIES=300
+MAX_KILL_TRIES=600
 
 checkpid()
 {

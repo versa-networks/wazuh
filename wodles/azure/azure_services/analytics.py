@@ -87,7 +87,6 @@ def start_log_analytics(args):
             md5_hash=md5_hash,
             query=args.la_query,
             tag=args.la_tag,
-            tenant=args.la_tenant_domain,
         )
     except HTTPError as e:
         logging.error(f'Log Analytics: {e}')
@@ -162,7 +161,7 @@ def build_log_analytics_query(
 
 
 def get_log_analytics_events(
-        url: str, body: dict, headers: dict, md5_hash: str, query: str, tag: str, tenant:str
+        url: str, body: dict, headers: dict, md5_hash: str, query: str, tag: str
 ):
     """Get the logs, process the response and iterate the events.
 
@@ -176,8 +175,6 @@ def get_log_analytics_events(
         The header for the request, containing the authentication token.
     md5_hash : str
         md5 value used to search the query in the file containing the dates.
-    tenant : str
-        The tenant domain.
 
     Raises
     ------
@@ -192,7 +189,7 @@ def get_log_analytics_events(
             columns = response.json()['tables'][0]['columns']
             rows = response.json()['tables'][0]['rows']
             if len(rows) == 0:
-                logging.info(f'Log Analytics: There are no new results for {tenant}')
+                logging.info('Log Analytics: There are no new results')
             else:
                 time_position = get_time_position(columns)
                 if time_position is not None:
@@ -205,11 +202,11 @@ def get_log_analytics_events(
                         query=query,
                     )
                 else:
-                    logging.error('No TimeGenerated field was found')
+                    logging.error('Error: No TimeGenerated field was found')
 
         except KeyError as e:
             logging.error(
-                f'It was not possible to obtain the columns and rows from the event: "{e}".'
+                f'Error: It was not possible to obtain the columns and rows from the event: "{e}".'
             )
     else:
         logging.error(f"Error with Log Analytics request: {response.json()}")

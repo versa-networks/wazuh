@@ -103,8 +103,6 @@ typedef enum wdb_global_group_hash_operations_t {
 
 // Router provider variables
 extern ROUTER_PROVIDER_HANDLE router_agent_events_handle;
-extern ROUTER_PROVIDER_HANDLE router_fim_events_handle;
-extern ROUTER_PROVIDER_HANDLE router_inventory_events_handle;
 
 typedef enum wdb_stmt {
     WDB_STMT_FIM_LOAD,
@@ -244,10 +242,7 @@ typedef enum wdb_stmt {
     WDB_STMT_GLOBAL_GROUP_BELONG_FIND,
     WDB_STMT_GLOBAL_GROUP_BELONG_GET,
     WDB_STMT_GLOBAL_SELECT_GROUPS,
-    WDB_STMT_GLOBAL_SYNC_REQ_FULL_GET,
-    WDB_STMT_GLOBAL_SYNC_REQ_STATUS_GET,
-    WDB_STMT_GLOBAL_SYNC_REQ_KEEPALIVE_GET,
-    WDB_STMT_GLOBAL_SYNC_GET,
+    WDB_STMT_GLOBAL_SYNC_REQ_GET,
     WDB_STMT_GLOBAL_SYNC_SET,
     WDB_STMT_GLOBAL_GROUP_SYNC_REQ_GET,
     WDB_STMT_GLOBAL_GROUP_SYNC_ALL_GET,
@@ -262,7 +257,6 @@ typedef enum wdb_stmt {
     WDB_STMT_GLOBAL_UPDATE_AGENT_INFO,
     WDB_STMT_GLOBAL_GET_GROUPS,
     WDB_STMT_GLOBAL_GET_AGENTS,
-    WDB_STMT_GLOBAL_GET_AGENTS_AND_GROUP,
     WDB_STMT_GLOBAL_GET_AGENTS_CONTEXT,
     WDB_STMT_GLOBAL_GET_AGENTS_BY_CONNECTION_STATUS,
     WDB_STMT_GLOBAL_GET_AGENTS_BY_CONNECTION_STATUS_AND_NODE,
@@ -427,14 +421,12 @@ extern char *schema_upgrade_v11_sql;
 extern char *schema_upgrade_v12_sql;
 extern char *schema_upgrade_v13_sql;
 extern char *schema_upgrade_v14_sql;
-extern char *schema_upgrade_v15_sql;
 extern char *schema_global_upgrade_v1_sql;
 extern char *schema_global_upgrade_v2_sql;
 extern char *schema_global_upgrade_v3_sql;
 extern char *schema_global_upgrade_v4_sql;
 extern char *schema_global_upgrade_v5_sql;
 extern char *schema_global_upgrade_v6_sql;
-extern char *schema_global_upgrade_v7_sql;
 
 extern wdb_config wconfig;
 extern _Config gconfig;
@@ -1008,9 +1000,6 @@ int wdb_stmt_cache(wdb_t * wdb, int index);
 
 int wdb_parse(char * input, char * output, int peer);
 
-sqlite3 * wdb_global_pre(void **wdb_ctx);
-void wdb_global_post(void *wdb_ctx);
-
 int wdb_parse_syscheck(wdb_t * wdb, wdb_component_t component, char * input, char * output);
 int wdb_parse_syscollector(wdb_t * wdb, const char * query, char * input, char * output);
 
@@ -1363,7 +1352,7 @@ int wdb_global_recalculate_agent_groups_hash(wdb_t* wdb, int agent_id, char* syn
  * @return WDBC_OK Success.
  *         WDBC_ERROR On error.
  */
-int wdb_global_recalculate_agent_groups_hash_without_sync_status(wdb_t* wdb, int agent_id, char * group);
+int wdb_global_recalculate_agent_groups_hash_without_sync_status(wdb_t* wdb, int agent_id);
 
 /**
  * @brief Function to recalculate the agent group hash for all agents.
@@ -2035,24 +2024,6 @@ cJSON* wdb_global_select_groups(wdb_t *wdb);
  * @retval JSON with agents IDs on success, NULL on error.
  */
 cJSON* wdb_global_get_group_agents(wdb_t *wdb,  wdbc_result* status, char* group_name, int last_agent_id);
-
-/**
- * @brief Function to find and set the correct sync status value
- *
- * @param [in] wdb The Global struct database.
- * @param [in] id The agent ID
- * @param [in] requested_sync_status The value of sync_status
-*/
-char *wdb_global_validate_sync_status(wdb_t *wdb, int id, const char *requested_sync_status);
-
-/**
- * @brief Function to get sync_status of a particular agent.
- *
- * @param [in] wdb The Global struct database.
- * @param [in] id The agent ID
- * @return The value of sync_status.
- */
-char * wdb_global_get_sync_status(wdb_t *wdb, int id);
 
 /**
  * @brief Function to update sync_status of a particular agent.

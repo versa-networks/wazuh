@@ -664,45 +664,6 @@ def test_plain_dict_to_nested_dict():
     assert result == mock_nested_dict
 
 
-@pytest.mark.parametrize('data, allow_config, exceptions, should_raise', [
-    ("<localfile><command>rm -rf /</command></localfile>",
-     {'localfile': {'allow': False, 'exceptions': []},
-      'wodle_command': {'allow': True, 'exceptions': []}},
-     [], True),
-
-    ("<localfile><command>echo test</command></localfile>",
-     {'localfile': {'allow': False, 'exceptions': ['echo test']},
-      'wodle_command': {'allow': True, 'exceptions': []}},
-     [], False),
-
-    ('<wodle name="command"><command>ls -la</command></wodle>',
-     {'localfile': {'allow': True, 'exceptions': []},
-      'wodle_command': {'allow': False, 'exceptions': []}},
-     [], True),
-
-    ('<wodle name="command"><command>test</command></wodle>',
-     {'localfile': {'allow': True, 'exceptions': []},
-      'wodle_command': {'allow': False, 'exceptions': ['test']}},
-     [], False),
-
-    ("<other><value>test</value></other>",
-     {'localfile': {'allow': False, 'exceptions': []},
-      'wodle_command': {'allow': False, 'exceptions': []}},
-     [], False),
-])
-def test_check_remote_commands(data, allow_config, exceptions, should_raise):
-    """Tests check_remote_commands with different remote command inputs."""
-    api_conf = utils.configuration.api_conf
-    api_conf['upload_configuration']['remote_commands'].update(allow_config)
-
-    with patch('wazuh.core.utils.configuration.api_conf', new=api_conf):
-        if should_raise:
-            with pytest.raises(exception.WazuhError, match=r'.* 1124 .*'):
-                utils.check_remote_commands(data)
-        else:
-            utils.check_remote_commands(data)
-
-
 @patch('wazuh.core.utils.compile', return_value='Something')
 def test_basic_load_wazuh_xml(mock_compile):
     """Test basic load_wazuh_xml functionality."""
@@ -1968,6 +1929,30 @@ def test_to_relative_path():
     assert utils.to_relative_path(path, prefix='etc') == os.path.basename(path)
 
 
+@patch('wazuh.core.utils.common.RULES_PATH', new=test_files_path)
+@patch('wazuh.core.utils.common.USER_RULES_PATH', new=test_files_path)
+def test_expand_rules():
+    rules = utils.expand_rules()
+    assert rules == set(map(os.path.basename, glob.glob(os.path.join(test_files_path,
+                                                                     f'*{utils.common.RULES_EXTENSION}'))))
+
+
+@patch('wazuh.core.utils.common.DECODERS_PATH', new=test_files_path)
+@patch('wazuh.core.utils.common.USER_DECODERS_PATH', new=test_files_path)
+def test_expand_decoders():
+    decoders = utils.expand_decoders()
+    assert decoders == set(map(os.path.basename, glob.glob(os.path.join(test_files_path,
+                                                                        f'*{utils.common.DECODERS_EXTENSION}'))))
+
+
+@patch('wazuh.core.utils.common.LISTS_PATH', new=test_files_path)
+@patch('wazuh.core.utils.common.USER_LISTS_PATH', new=test_files_path)
+def test_expand_lists():
+    lists = utils.expand_lists()
+    assert lists == set(filter(lambda x: len(x.split('.')) == 1, map(os.path.basename, glob.glob(os.path.join(
+        test_files_path, f'*{utils.common.LISTS_EXTENSION}')))))
+
+
 def test_full_copy():
     """Test `full_copy` function.
 
@@ -2313,60 +2298,3 @@ def test_check_virustotal_integration(integrations_conf, new_conf):
             with pytest.raises(exception.WazuhError, match=".* 1131 .*"):
                 mock_requests_get.side_effect = exceptions.RequestException
                 utils.check_virustotal_integration(new_conf)
-
-@pytest.mark.parametrize(
-    "version_str, expected_result",
-    [
-        ("Wazuh v4.3.10", True),
-        ("Wazuh v3.0.0", True),
-        ("Wazuh v1.2.3", True),
-        ("Wazuhv4.3.10", False),
-        ("wazuh v4.3.10", False),
-        ("Wazuh v4.3", False),
-        ("Wazuh 4.3.10", False),
-        ("Not a version", False),
-    ]
-)
-def test_check_if_wazuh_agent_version(version_str, expected_result):
-    """
-    Test the check_if_wazuh_agent_version function.
-
-    Parameters
-    ----------
-    version_str : str
-        The version string to check.
-    expected_result : bool
-        Expected result from the function based on the input format.
-
-    Asserts
-    -------
-    bool
-        The function returns True for valid version formats and False otherwise.
-    """
-    assert utils.check_if_wazuh_agent_version(version_str) == expected_result
-
-
-@pytest.mark.parametrize(
-    "version_str, expected_tuple",
-    [
-        ("Wazuh v4.3.10", (4, 3, 10)),
-        ("Wazuh v0.0.1", (0, 0, 1)),
-    ]
-)
-def test_parse_wazuh_agent_version(version_str, expected_tuple):
-    """
-    Test the parse_wazuh_agent_version function.
-
-    Parameters
-    ----------
-    version_str : str
-        The version string to parse.
-    expected_tuple : tuple
-        Expected output tuple (X, Y, Z) extracted from the input string.
-
-    Asserts
-    -------
-    tuple
-        The function correctly parses the version string into a tuple of integers.
-    """
-    assert utils.parse_wazuh_agent_version(version_str) == expected_tuple

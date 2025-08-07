@@ -85,7 +85,6 @@ def start_graph(args):
             md5_hash=md5_hash,
             query=args.graph_query,
             tag=args.graph_tag,
-            tenant=args.graph_tenant_domain
         )
     except HTTPError as e:
         logging.error(f'Graph: {e}')
@@ -155,7 +154,7 @@ def build_graph_url(query: str, offset: str, reparse: bool, md5_hash: str):
     return f'{URL_GRAPH}/v1.0/{query}{"?" if "?" not in query else ""}&$filter={filter_value}'
 
 
-def get_graph_events(url: str, headers: dict, md5_hash: str, query: str, tag: str, tenant:str):
+def get_graph_events(url: str, headers: dict, md5_hash: str, query: str, tag: str):
     """Request the data using the specified url and process the values in the response.
 
     Parameters
@@ -166,8 +165,6 @@ def get_graph_events(url: str, headers: dict, md5_hash: str, query: str, tag: st
         The header for the request, containing the authentication token.
     md5_hash : str
         md5 value used to search the query in the file containing the dates.
-    tenant : str
-        The tenant domain.
 
     Raises
     ------
@@ -202,14 +199,14 @@ def get_graph_events(url: str, headers: dict, md5_hash: str, query: str, tag: st
             send_message(json_result)
 
         if len(values_json) == 0:
-            logging.info(f'Graph: There are no new results for {tenant}')
+            logging.info('Graph: There are no new results')
         next_url = response_json.get('@odata.nextLink')
 
         if next_url:
             logging.info(f"Graph: Requesting data from next page")
             logging.debug(f"Iterating to next url: {next_url}")
             get_graph_events(
-                url=next_url, headers=headers, md5_hash=md5_hash, query=query, tag=tag, tenant=tenant
+                url=next_url, headers=headers, md5_hash=md5_hash, query=query, tag=tag
             )
     elif response.status_code == 400:
         logging.error(f'Bad Request for url: {response.url}')

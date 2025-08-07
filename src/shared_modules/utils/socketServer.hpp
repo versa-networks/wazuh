@@ -106,7 +106,7 @@ private:
             // If EPOLLIN is set, then we can read data, so process the read.
             if (event & EPOLLIN)
             {
-                processRead(std::move(client), onRead);
+                processRead(client, onRead);
             }
 
             // If EPOLLERR or EPOLLHUP is set, then remove the client(Close the connection). This removes is in the end

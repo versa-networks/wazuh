@@ -1222,23 +1222,14 @@ void test_audit_rules_to_realtime_first_search_audit_rule_fail(void **state) {
 
     audit_rules_to_realtime();
 
-    // Verify that Whodata has been disabled and Realtime enabled for directory 1.
-    if (((directory_t *)OSList_GetDataFromIndex(syscheck.directories, 1))->options & WHODATA_ACTIVE){
-	// Whodata is active; it should have been switched to Realtime.
-	fail();
-    }else{
-	// Whodata is inactive; verify that Realtime was activated.
-	if (!(((directory_t *)OSList_GetDataFromIndex(syscheck.directories, 1))->options & REALTIME_ACTIVE)){
-                // Realtime was not activated.
-		fail();
-	}
-    }
-
-    // Verify that Whodata remains active for directory 0.
-    if (!(((directory_t *)OSList_GetDataFromIndex(syscheck.directories, 0))->options & WHODATA_ACTIVE)){
+    // Check that the options have been correctly changed
+    if (((directory_t *)OSList_GetDataFromIndex(syscheck.directories, 0))->options & ~WHODATA_ACTIVE) {
         fail();
     }
 
+    if (((directory_t *)OSList_GetDataFromIndex(syscheck.directories, 1))->options & WHODATA_ACTIVE) {
+        fail();
+    }
 }
 
 void test_audit_rules_to_realtime_second_search_audit_rule_fail(void **state) {
@@ -1263,20 +1254,12 @@ void test_audit_rules_to_realtime_second_search_audit_rule_fail(void **state) {
 
     audit_rules_to_realtime();
 
-    // Verify that Whodata has been disabled and Realtime enabled for directory 0.
-    if (((directory_t *)OSList_GetDataFromIndex(syscheck.directories, 0))->options & WHODATA_ACTIVE){
-	// Whodata is active; it should have been switched to Realtime.
-	fail();
-    }else{
-	// Whodata is inactive; verify that Realtime was activated.
-	if (!(((directory_t *)OSList_GetDataFromIndex(syscheck.directories, 0))->options & REALTIME_ACTIVE)){
-                // Realtime was not activated.
-		fail();
-	}
+    // Check that the options have been correctly changed
+    if (((directory_t *)OSList_GetDataFromIndex(syscheck.directories, 0))->options & WHODATA_ACTIVE) {
+        fail();
     }
 
-   // Verify that Whodata remains active for directory 1.
-    if (!(((directory_t *)OSList_GetDataFromIndex(syscheck.directories, 1))->options & WHODATA_ACTIVE)){
+    if (((directory_t *)OSList_GetDataFromIndex(syscheck.directories, 1))->options & ~WHODATA_ACTIVE) {
         fail();
     }
 }

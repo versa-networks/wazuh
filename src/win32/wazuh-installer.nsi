@@ -20,8 +20,8 @@
 ; general
 !define MUI_ICON install.ico
 !define MUI_UNICON uninstall.ico
-!define VERSION "5.0.0"
-!define REVISION "alpha0"
+!define VERSION "4.10.2"
+!define REVISION "41021"
 !define NAME "Wazuh"
 !define SERVICE "WazuhSvc"
 
@@ -36,7 +36,7 @@ Name "${NAME} Windows Agent v${VERSION}"
 BrandingText "Copyright (C) 2015, Wazuh Inc."
 OutFile "${OutFile}"
 
-VIProductVersion "5.0.0.0"
+VIProductVersion "4.10.2.0"
 VIAddVersionKey ProductName "${NAME}"
 VIAddVersionKey CompanyName "Wazuh Inc."
 VIAddVersionKey LegalCopyright "2023 - Wazuh Inc."
@@ -221,7 +221,8 @@ Section "Wazuh Agent (required)" MainSec
     File /oname=syscollector.dll ..\wazuh_modules\syscollector\build\bin\syscollector.dll
     File /oname=libfimdb.dll ..\syscheckd/build/bin/libfimdb.dll
     File /oname=queue\syscollector\norm_config.json ..\wazuh_modules\syscollector\norm_config.json
-    File VERSION.json
+    File VERSION
+    File REVISION
 
     ; Create empty file active-responses.log
     FileOpen $0 "$INSTDIR\active-response\active-responses.log" w

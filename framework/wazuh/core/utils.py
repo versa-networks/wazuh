@@ -886,11 +886,11 @@ def check_remote_commands(data: str):
             pass
 
     if not blocked_configurations['remote_commands']['localfile']['allow']:
-        command_section = re.compile(r"<localfile>(.*?)</localfile>", flags=re.MULTILINE | re.DOTALL)
+        command_section = re.compile(r"<localfile>(.*)</localfile>", flags=re.MULTILINE | re.DOTALL)
         check_section(command_section, section='localfile', split_section='</localfile>')
 
     if not blocked_configurations['remote_commands']['wodle_command']['allow']:
-        command_section = re.compile(r"<wodle name=\"command\">(.*?)</wodle>", flags=re.MULTILINE | re.DOTALL)
+        command_section = re.compile(r"<wodle name=\"command\">(.*)</wodle>", flags=re.MULTILINE | re.DOTALL)
         check_section(command_section, section='wodle_command', split_section='<wodle name=\"command\">')
 
 
@@ -2016,6 +2016,63 @@ class WazuhDBQueryGroupBy(WazuhDBQuery):
         self.select = self.select & self.filter_fields['fields']
 
 
+@common.context_cached('system_rules')
+def expand_rules() -> set:
+    """Return all ruleset rule files in the system.
+
+    Returns
+    -------
+    set
+        Rule files.
+    """
+    folders = [common.RULES_PATH, common.USER_RULES_PATH]
+    rules = set()
+    for folder in folders:
+        for _, _, files in walk(folder):
+            for f in filter(lambda x: x.endswith(common.RULES_EXTENSION), files):
+                rules.add(f)
+
+    return rules
+
+
+@common.context_cached('system_decoders')
+def expand_decoders() -> set:
+    """Return all ruleset decoder files in the system.
+
+    Returns
+    -------
+    set
+        Decoder files.
+    """
+    folders = [common.DECODERS_PATH, common.USER_DECODERS_PATH]
+    decoders = set()
+    for folder in folders:
+        for _, _, files in walk(folder):
+            for f in filter(lambda x: x.endswith(common.DECODERS_EXTENSION), files):
+                decoders.add(f)
+
+    return decoders
+
+
+@common.context_cached('system_lists')
+def expand_lists() -> set:
+    """Return all cdb list files in the system.
+
+    Returns
+    -------
+    set
+        CDB list files.
+    """
+    folders = [common.LISTS_PATH, common.USER_LISTS_PATH]
+    lists = set()
+    for folder in folders:
+        for _, _, files in walk(folder):
+            for f in filter(lambda x: x.endswith(common.LISTS_EXTENSION), files):
+                # List files do not have an extension at the moment
+                if '.' not in f:
+                    lists.add(f)
+
+    return lists
 
 
 def add_dynamic_detail(detail: str, value: str, attribs: dict, details: dict):
@@ -2329,41 +2386,3 @@ def get_utc_strptime(date: str, datetime_format: str) -> datetime:
         The current date.
     """
     return datetime.strptime(date, datetime_format).replace(tzinfo=timezone.utc)
-
-def check_if_wazuh_agent_version(version_str: str) -> bool:
-    """Check if the string has the expected wazuh agent version format.
-
-    Parameters
-    ----------
-    version_str : str
-        The wazuh version string.
-
-    Returns
-    -------
-    bool
-        True if the string has the expected wazuh version format.
-
-    """
-    if not isinstance(version_str, str):
-        return False
-
-    return bool(re.match(r'^Wazuh v(\d+)\.(\d+)\.(\d+)', version_str))
-
-
-def parse_wazuh_agent_version(version_str: str) -> tuple:
-    """Convert the string vX.Y.Z to a tuple of type (X, Y, Z).
-
-    Parameters
-    ----------
-    version_str : str
-        The wazuh version string.
-
-    Returns
-    -------
-    tuple
-        The tuple of the wazuh version string.
-    """
-    match = re.search(r'v(\d+)\.(\d+)\.(\d+)', version_str)
-    if match:
-        return tuple(map(int, match.groups()))
-    return 0, 0, 0

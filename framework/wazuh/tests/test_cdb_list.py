@@ -25,8 +25,6 @@ with patch('wazuh.core.common.getgrnam'):
             delete_list_file
         from wazuh.core import common
         from wazuh.core.results import AffectedItemsWazuhResult
-        from wazuh.rbac.utils import RESOURCES_CACHE
-
 
 RELATIVE_PATH = os.path.join("framework", "wazuh", "tests", "data", "test_cdb_list")
 NAME_FILE_1 = "test_lists_1"
@@ -189,7 +187,7 @@ def test_get_path_lists(iterate_mock):
     `get_path_lists` works different than `get_lists` as it will read every CDB file from the default path (mocked to
     `DATA_PATH`) and will remove from the result any file that is not in the `path` parameter provided.
     """
-    RESOURCES_CACHE.clear()
+    common.reset_context_cache()
     result = get_path_lists(filename=[NAME_FILE_1])
 
     assert isinstance(result, AffectedItemsWazuhResult)
@@ -208,7 +206,7 @@ def test_get_path_lists_limit(iterate_mock, limit):
     limit : int
         Maximum number of items to be returned by `get_path_lists`
     """
-    RESOURCES_CACHE.clear()
+    common.reset_context_cache()
     result = get_path_lists(filename=NAME_FILES, limit=limit, sort_by=['filename'])
 
     assert isinstance(result, AffectedItemsWazuhResult)
@@ -227,7 +225,7 @@ def test_get_path_lists_offset(iterate_mock, offset):
     offset : int
          Indicates the first item to return.
     """
-    RESOURCES_CACHE.clear()
+    common.reset_context_cache()
     result = get_path_lists(filename=NAME_FILES, offset=offset, sort_by=['filename'])
 
     assert isinstance(result, AffectedItemsWazuhResult)
@@ -271,7 +269,7 @@ def test_get_path_lists_search(iterate_mock, search_text, complementary_search, 
     expected_result : list of dict
         The content expected to be returned by `get_lists` when using the specified search parameters.
     """
-    RESOURCES_CACHE.clear()
+    common.reset_context_cache()
     result = get_path_lists(filename=paths, search_text=search_text, complementary_search=complementary_search,
                             search_in_fields=search_in_fields, sort_by=['filename'])
     assert isinstance(result, AffectedItemsWazuhResult)
@@ -327,8 +325,7 @@ def test_get_list_file(filename, raw, expected_result, total_failed_items):
 @patch('wazuh.cdb_list.delete_list_file')
 @patch('wazuh.cdb_list.remove')
 @patch('wazuh.cdb_list.exists', return_value=True)
-@patch('wazuh.cdb_list.send_reload_ruleset_msg', return_value={'error': 0})
-def test_upload_list_file(mock_reload, mock_exists, mock_remove, mock_delete_list_file, mock_upload_file,
+def test_upload_list_file(mock_exists, mock_remove, mock_delete_list_file, mock_upload_file,
                           mock_delete_file_with_backup, mock_safe_move):
     """Check that functions inside upload_list_file are called with expected params"""
     filename = 'test_file'
@@ -340,7 +337,6 @@ def test_upload_list_file(mock_reload, mock_exists, mock_remove, mock_delete_lis
     mock_delete_file_with_backup.assert_called_once_with(os.path.join(common.USER_LISTS_PATH, filename + '.backup'),
                                                          os.path.join(common.USER_LISTS_PATH, filename),
                                                          mock_delete_list_file)
-    mock_reload.assert_called_once()
 
 
 @patch('wazuh.cdb_list.common.USER_LISTS_PATH', return_value='/test/path')
@@ -377,8 +373,7 @@ def test_upload_list_file_ko(mock_remove, mock_lists_path):
 
 
 @patch('wazuh.core.cdb_list.delete_wazuh_file')
-@patch('wazuh.cdb_list.send_reload_ruleset_msg', return_value={'error': 0})
-def test_delete_list_file(mock_reload, mock_delete_file):
+def test_delete_list_file(mock_delete_file):
     """Check that expected result is returned when the file is deleted."""
     try:
         # Create directory for the test
@@ -397,7 +392,6 @@ def test_delete_list_file(mock_reload, mock_delete_file):
             pass
 
     mock_delete_file.assert_called_once_with(test_file)
-    mock_reload.assert_called_once()
 
 
 def test_delete_list_file_ko():

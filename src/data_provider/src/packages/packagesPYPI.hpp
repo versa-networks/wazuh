@@ -18,18 +18,14 @@
 #include "json.hpp"
 #include "sharedDefs.h"
 #include "stringHelper.h"
-#include "utilsWrapperLinux.hpp"
 #include <iostream>
 #include <set>
-#include <unordered_set>
 
 const static std::map<std::string, std::string> FILE_MAPPING_PYPI {{"egg-info", "PKG-INFO"}, {"dist-info", "METADATA"}};
 
 template<typename TFileSystem = RealFileSystem, typename TFileIO = FileIO>
 class PYPI final : public TFileSystem, public TFileIO
 {
-        std::unordered_set<std::string> m_pathsToExclude;
-
         void parseMetadata(const std::filesystem::path& path, std::function<void(nlohmann::json&)>& callback)
         {
             // Map to match fields
@@ -94,23 +90,18 @@ class PYPI final : public TFileSystem, public TFileIO
                 {
                     if (filename.find(key) != std::string::npos)
                     {
-                        std::filesystem::path correctPath;
-
                         if (TFileSystem::is_regular_file(path))
                         {
-                            correctPath = path;
+                            parseMetadata(path, callback);
                         }
                         else if (TFileSystem::is_directory(path))
                         {
-                            correctPath = path / value;
+                            parseMetadata(path / value, callback);
                         }
-
-                        if (m_pathsToExclude.find(correctPath.string()) != m_pathsToExclude.end())
+                        else
                         {
-                            return;
+                            // Do nothing
                         }
-
-                        parseMetadata(correctPath, callback);
                     }
                 }
             }
@@ -143,11 +134,8 @@ class PYPI final : public TFileSystem, public TFileIO
         }
 
     public:
-        void getPackages(const std::set<std::string>& osRootFolders,
-                         std::function<void(nlohmann::json&)> callback,
-                         const std::unordered_set<std::string>& excludePaths = {})
+        void getPackages(const std::set<std::string>& osRootFolders, std::function<void(nlohmann::json&)> callback)
         {
-            m_pathsToExclude = excludePaths;
 
             for (const auto& osFolder : osRootFolders)
             {

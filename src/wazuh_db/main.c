@@ -12,11 +12,8 @@
 #include "wdb.h"
 #include "wdb_state.h"
 #include <os_net/os_net.h>
-#include "router.h"
 
 #define WDB_AGENT_EVENTS_TOPIC "wdb-agent-events"
-#define WDB_FIM_EVENTS_TOPIC "wdb-fim-events"
-#define WDB_INVENTORY_EVENTS_TOPIC "wdb-inventory-events"
 
 static void wdb_help() __attribute__ ((noreturn));
 static void handler(int signum);
@@ -211,14 +208,6 @@ int main(int argc, char ** argv)
         mdebug2("Failed to create router handle for 'wdb-agent-events'.");
     }
 
-    if (router_fim_events_handle = router_provider_create(WDB_FIM_EVENTS_TOPIC, false), !router_fim_events_handle) {
-        mdebug2("Failed to create router handle for 'wdb-fim-events'.");
-    }
-
-    if (router_inventory_events_handle = router_provider_create(WDB_INVENTORY_EVENTS_TOPIC, false), !router_inventory_events_handle) {
-        mdebug2("Failed to create router handle for 'wdb-inventory-events'.");
-    }
-
     if (notify_queue = wnotify_init(1), !notify_queue) {
         merror_exit("at run_dealer(): wnotify_init(): %s (%d)",
                 strerror(errno), errno);
@@ -240,16 +229,6 @@ int main(int argc, char ** argv)
     }
 
     os_calloc(wconfig.worker_pool_size, sizeof(pthread_t), worker_pool);
-
-    router_register_api_endpoint("wazuh-db","wdb-http.sock", "GET", "/v1/agents/ids", (void*)&wdb_global_pre, (void*)&wdb_global_post);
-    router_register_api_endpoint("wazuh-db","wdb-http.sock", "GET", "/v1/agents/ids/groups/:name", (void*)&wdb_global_pre, (void*)&wdb_global_post);
-    router_register_api_endpoint("wazuh-db","wdb-http.sock", "GET", "/v1/agents/ids/groups", (void*)&wdb_global_pre, (void*)&wdb_global_post);
-    router_register_api_endpoint("wazuh-db","wdb-http.sock", "GET", "/v1/agents/:agent_id/groups", (void*)&wdb_global_pre, (void*)&wdb_global_post);
-    router_register_api_endpoint("wazuh-db","wdb-http.sock", "POST", "/v1/agents/summary", (void*)&wdb_global_pre, (void*)&wdb_global_post);
-    router_register_api_endpoint("wazuh-db","wdb-http.sock", "GET", "/v1/agents/sync", (void*)&wdb_global_pre, (void*)&wdb_global_post);
-    router_register_api_endpoint("wazuh-db","wdb-http.sock", "POST", "/v1/agents/sync", (void*)&wdb_global_pre, (void*)&wdb_global_post);
-
-    router_start_api("wdb-http.sock");
 
     for (i = 0; i < wconfig.worker_pool_size; i++) {
         if (status = pthread_create(worker_pool + i, NULL, run_worker, NULL), status != 0) {
@@ -282,8 +261,6 @@ int main(int argc, char ** argv)
     for (i = 0; i < wconfig.worker_pool_size; i++) {
         pthread_join(worker_pool[i], NULL);
     }
-
-    router_stop_api("wdb-http.sock");
 
     wnotify_close(notify_queue);
     free(worker_pool);

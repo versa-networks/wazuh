@@ -50,9 +50,7 @@ static const char* rpm_platforms[] = {
     "opensuse-tumbleweed",
     "rhel",
     "sles",
-    "suse",
-    "rocky",
-    "almalinux",
+    "suse"
 };
 
 int wm_agent_upgrade_validate_id(int agent_id) {

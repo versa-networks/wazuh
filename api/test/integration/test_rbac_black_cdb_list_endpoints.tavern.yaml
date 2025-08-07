@@ -22,11 +22,8 @@ stages:
             - items: !anything
               filename: aws-sources
               relative_dirname: etc/lists/amazon
-            - items: !anything
-              filename: malware-hashes
-              relative_dirname: etc/lists/malicious-ioc
           failed_items: []
-          total_affected_items: 5
+          total_affected_items: 2
           total_failed_items: 0
 
   - name: Show an specified filename (Allow)
@@ -88,10 +85,8 @@ stages:
               relative_dirname: etc/lists
             - filename: aws-sources
               relative_dirname: etc/lists/amazon
-            - filename: malware-hashes
-              relative_dirname: etc/lists/malicious-ioc
           failed_items: []
-          total_affected_items: 5
+          total_affected_items: 2
           total_failed_items: 0
 
 ---

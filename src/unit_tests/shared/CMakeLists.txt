@@ -28,7 +28,7 @@ if(NOT ${TARGET} STREQUAL "winagent")
                             -Wl,--wrap,gzopen,--wrap,gzread,--wrap,gzclose,--wrap,fgetc \
                             -Wl,--wrap,gzeof,--wrap,gzerror,--wrap,gzwrite,--wrap,fgetpos \
                             -Wl,--wrap,realpath,--wrap,getenv,--wrap,atexit ${DEBUG_OP_WRAPPERS} \
-                            -Wl,--wrap,merror,--wrap,fseek,--wrap,access")
+                            -Wl,--wrap,merror,--wrap,fseek")
     list(APPEND shared_tests_flags "${FILE_OP_BASE_FLAGS}")
 else()
     list(APPEND shared_tests_flags "-Wl,--wrap,get_windows_file_time_epoch,--wrap,mdebug2 \
@@ -134,8 +134,7 @@ set(ENROLLMENT_OP_BASE_FLAGS "-Wl,--wrap=OS_IsValidIP,--wrap=_merror,--wrap=_mwa
                               -Wl,--wrap=SSL_write,--wrap=fopen,--wrap=fclose,--wrap=SSL_read \
                               -Wl,--wrap=BIO_new_socket,--wrap=_merror_exit,--wrap=TempFile,--wrap=OS_MoveFile \
                               -Wl,--wrap=fgets -Wl,--wrap,OS_CloseSocket,--wrap=wfopen,--wrap=fflush,--wrap=fgetpos \
-                              -Wl,--wrap=fread,--wrap=fseek,--wrap=fwrite,--wrap=remove,--wrap=fgetc -Wl,--wrap,popen \
-                              -Wl,--wrap=OS_SetRecvTimeout")
+                              -Wl,--wrap=fread,--wrap=fseek,--wrap=fwrite,--wrap=remove,--wrap=fgetc -Wl,--wrap,popen")
 
 if(${TARGET} STREQUAL "winagent")
     list(APPEND shared_tests_flags "${ENROLLMENT_OP_BASE_FLAGS} -Wl,--wrap,syscom_dispatch -Wl,--wrap,Start_win32_Syscheck \

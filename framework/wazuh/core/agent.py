@@ -24,9 +24,6 @@ from wazuh.core.utils import WazuhVersion, plain_dict_to_nested_dict, get_fields
 from wazuh.core.wazuh_queue import WazuhQueue
 from wazuh.core.wazuh_socket import WazuhSocket, WazuhSocketJSON, create_wazuh_socket_message
 from wazuh.core.wdb import WazuhDBConnection
-from wazuh.core.wdb_http import get_wdb_http_client
-from wazuh.rbac.utils import resource_cache
-
 
 detect_wrong_lines = re.compile(r'(.+ .+ (?:any|\d+\.\d+\.\d+\.\d+) \w+)')
 detect_valid_lines = re.compile(r'^(\d{3,}) (.+) (any|\d+\.\d+\.\d+\.\d+) (\w+)', re.MULTILINE)
@@ -911,7 +908,7 @@ class Agent:
         return data
 
     @staticmethod
-    async def add_group_to_agent(group_id: str, agent_id: str, replace: bool = False, replace_list: list = None) -> str:
+    def add_group_to_agent(group_id: str, agent_id: str, replace: bool = False, replace_list: list = None) -> str:
         """Add an existing group to an agent.
 
         Parameters
@@ -944,7 +941,7 @@ class Agent:
 
         # Get agent's group
         try:
-            agent_groups = set(await Agent.get_agent_groups(agent_id))
+            agent_groups = set(Agent.get_agent_groups(agent_id))
         except Exception as e:
             raise WazuhInternalError(2007, extra_message=str(e))
 
@@ -1031,7 +1028,7 @@ class Agent:
             return False
 
     @staticmethod
-    async def get_agent_groups(agent_id: str) -> list[str]:
+    def get_agent_groups(agent_id: str) -> list:
         """Return all agent's groups.
 
         Parameters
@@ -1041,11 +1038,15 @@ class Agent:
 
         Returns
         -------
-        list[str]
+        list
             List of group IDs.
         """
-        async with get_wdb_http_client() as wdb_client:
-            return await wdb_client.get_agent_groups(agent_id)
+        wdb = WazuhDBConnection()
+        try:
+            _, payload = wdb.send(f'global select-group-belong {agent_id}', raw=True)
+            return json.loads(payload)
+        finally:
+            wdb.close()
 
     @staticmethod
     def set_agent_group_relationship(agent_id: str, group_id: str, remove: bool = False, override: bool = False):
@@ -1078,7 +1079,7 @@ class Agent:
             wdb.close()
 
     @staticmethod
-    async def unset_single_group_agent(agent_id: str, group_id: str, force: bool = False) -> str:
+    def unset_single_group_agent(agent_id: str, group_id: str, force: bool = False) -> str:
         """Unset the agent group. If agent has multigroups, it will preserve all previous groups except the last one.
 
         Parameters
@@ -1117,7 +1118,7 @@ class Agent:
                 raise WazuhResourceNotFound(1710)
 
         # Get agent's group
-        group_list = set(await Agent.get_agent_groups(agent_id))
+        group_list = set(Agent.get_agent_groups(agent_id))
         set_default = False
 
         # Check agent belongs to group group_id
@@ -1309,9 +1310,9 @@ def get_groups() -> set:
     return groups
 
 
-@resource_cache()
+@common.context_cached('system_expanded_groups')
 def expand_group(group_name: str) -> set:
-    """Expand a certain group.
+    """Expand a certain group or all (*) of them.
 
     Parameters
     ----------
@@ -1328,14 +1329,17 @@ def expand_group(group_name: str) -> set:
     try:
         last_id = 0
         while True:
-            command = f'global get-group-agents {group_name} last_id {last_id}'
+            if group_name == '*':
+                command = 'global sync-agent-groups-get {"last_id":' f'{last_id}' ', "condition":"all"}'
+            else:
+                command = f'global get-group-agents {group_name} last_id {last_id}'
 
             status, payload = wdb_conn.send(command, raw=True)
             agents = json.loads(payload)
 
-            for agent_id in agents:
-                agent_id_str = str(agent_id).zfill(3)
-                agents_ids.append(agent_id_str)
+            for agent in agents[0]['data'] if group_name == '*' else agents:
+                agent_id = str(agent['id'] if isinstance(agent, dict) else agent).zfill(3)
+                agents_ids.append(agent_id)
 
             if status == 'ok':
                 break
@@ -1345,8 +1349,7 @@ def expand_group(group_name: str) -> set:
     finally:
         wdb_conn.close()
 
-    system_agents = get_agents_info()
-    return set(agents_ids) & system_agents
+    return set(agents_ids) & get_agents_info()
 
 
 @lru_cache()

@@ -70,7 +70,11 @@ build_pkg() {
         fi
     else
         CONTAINER_NAME="pkg_${SYSTEM}_${TARGET}_builder_${ARCHITECTURE}"
-        DOCKERFILE_PATH="${CURRENT_PATH}/${SYSTEM}s/${ARCHITECTURE}/${TARGET}"
+        if [ "${ARCHITECTURE}" = "ppc64le" ]; then
+            DOCKERFILE_PATH="${CURRENT_PATH}/${SYSTEM}s/${ARCHITECTURE}"
+        else
+            DOCKERFILE_PATH="${CURRENT_PATH}/${SYSTEM}s/${ARCHITECTURE}/${TARGET}"
+        fi
     fi
 
     # Copy the necessary files
@@ -79,11 +83,11 @@ build_pkg() {
 
     # Build the Docker image
     if [[ ${BUILD_DOCKER} == "yes" ]]; then
-        docker build -t ${CONTAINER_NAME}:${DOCKER_TAG} ${DOCKERFILE_PATH} || return 1
+        docker build --platform=linux/amd64 -t ${CONTAINER_NAME}:${DOCKER_TAG} ${DOCKERFILE_PATH} || return 1
     fi
 
     # Build the Debian package with a Docker container
-    docker run -t --rm -v ${OUTDIR}:/var/local/wazuh:Z \
+    docker run --platform=linux/amd64 -t --rm -v ${OUTDIR}:/var/local/wazuh:Z \
         -e SYSTEM="$SYSTEM" \
         -e BUILD_TARGET="${TARGET}" \
         -e ARCHITECTURE_TARGET="${ARCHITECTURE}" \
@@ -261,6 +265,9 @@ main() {
     if [ -z "${CUSTOM_CODE_VOL}" ] && [ -z "${BRANCH}" ]; then
         CUSTOM_CODE_VOL="-v $WAZUH_PATH:/wazuh-local-src:Z"
     fi
+
+    echo "aoisdjopaiskdpoaksdpokaspodkapsokd"
+    echo $CUSTOM_CODE_VOL
 
     build && clean 0
     clean 1

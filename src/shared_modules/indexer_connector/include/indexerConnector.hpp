@@ -101,6 +101,18 @@ class EXPORTED IndexerConnector final
     bool abuseControl(const std::string& agentId);
 
     /**
+     * @brief Send bulk reactive, this method is used to send a bulk request to the indexer.
+     * @param actions Actions to be sent.
+     * @param url Indexer URL.
+     * @param secureCommunication Secure communication.
+     * @param depth Depth for recursive calls.
+     */
+    void sendBulkReactive(const std::vector<std::pair<std::string, bool>>& actions,
+                          const std::string& url,
+                          const SecureCommunication& secureCommunication,
+                          int depth = 1);
+
+    /**
      * @brief Initializing steps before the module starts.
      *
      * @param logFunction Callback function to be called when trying to log a message.
@@ -114,18 +126,6 @@ class EXPORTED IndexerConnector final
                                                     const std::string&,
                                                     va_list)>& logFunction,
                            const nlohmann::json& config);
-
-    /*
-     * @brief Send bulk reactive, this method is used to send a bulk request to the indexer.
-     * @param actions Actions to be sent.
-     * @param url Indexer URL.
-     * @param secureCommunication Secure communication.
-     * @param depth Depth for recursive calls.
-     */
-    void sendBulkReactive(const std::vector<std::pair<std::string, bool>>& actions,
-                          const std::string& url,
-                          const SecureCommunication& secureCommunication,
-                          int depth = 1);
 
 public:
     /**

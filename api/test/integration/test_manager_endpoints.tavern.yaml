@@ -64,7 +64,6 @@ stages:
               tz_name: !anystr
               tz_offset: !anystr
               version: !anystr
-              uuid: !anystr
           failed_items: []
           total_affected_items: 1
           total_failed_items: 0
@@ -927,7 +926,6 @@ stages:
                   max_request_per_minute: !anyint
                 drop_privileges: !anybool
                 experimental_features: !anybool
-                authentication_pool_size: !anyint
                 upload_configuration:
                   remote_commands:
                     localfile:

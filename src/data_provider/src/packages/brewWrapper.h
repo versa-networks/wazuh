@@ -111,7 +111,7 @@ class BrewWrapper final : public IPackageWrapper
             return m_priority;
         }
 
-        int64_t size() const override
+        int size() const override
         {
             return m_size;
         }
@@ -136,7 +136,7 @@ class BrewWrapper final : public IPackageWrapper
         const std::string m_source;
         const std::string m_location;
         std::string m_priority;
-        int64_t m_size;
+        int m_size;
         std::string m_vendor;
         std::string m_installTime;
         std::string m_multiarch;

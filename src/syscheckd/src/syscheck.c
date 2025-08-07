@@ -17,8 +17,6 @@
 #include "../rootcheck/rootcheck.h"
 #include "db/include/db.h"
 #include "db/include/fimCommonDefs.h"
-#include "ebpf/include/ebpf_whodata.h"
-
 // Global variables
 syscheck_config syscheck;
 int sys_debug_level;
@@ -314,22 +312,3 @@ int Start_win32_Syscheck() {
     return 0;
 }
 #endif /* WIN32 */
-
-#ifdef __linux__
-#ifdef ENABLE_AUDIT
-void check_ebpf_availability() {
-    minfo(FIM_EBPF_INIT);
-    fimebpf_initialize(fim_configuration_directory, get_user, get_group, fim_whodata_event,
-                       free_whodata_event, loggingFunction, abspath, fim_shutdown_process_on, syscheck.queue_size);
-    if (ebpf_whodata_healthcheck()) {
-        directory_t *dir_it;
-        OSListNode *node_it;
-
-        mwarn(FIM_ERROR_EBPF_HEALTHCHECK);
-
-        // Switch whodata eBPF to whodata audit
-        syscheck.whodata_provider = AUDIT_PROVIDER;
-    }
-}
-#endif /* ENABLE_AUDIT */
-#endif /* __linux__ */

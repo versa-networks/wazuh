@@ -290,19 +290,8 @@ int main(int argc, char **argv)
         realtime_start();
     }
 
-    // Launch Whodata ebpf real-time thread
-    if (!syscheck.disabled && syscheck.enable_whodata && syscheck.whodata_provider == EBPF_PROVIDER) {
-#ifdef __linux__
-#ifdef ENABLE_AUDIT
-        check_ebpf_availability();
-#else
-        merror(FIM_ERROR_EBPF_NOT_SUPPORTED);
-#endif
-#endif
-    }
-
     // Audit events thread
-    if (!syscheck.disabled && syscheck.enable_whodata && syscheck.whodata_provider == AUDIT_PROVIDER) {
+    if (!syscheck.disabled && syscheck.enable_whodata) {
 #ifdef ENABLE_AUDIT
         if (audit_init() < 0) {
             directory_t *dir_it;
@@ -314,7 +303,7 @@ int main(int argc, char **argv)
 
             OSList_foreach(node_it, syscheck.directories) {
                 dir_it = node_it->data;
-                if ((dir_it->options & WHODATA_ACTIVE)) {
+                if (dir_it->options & WHODATA_ACTIVE) {
                     dir_it->options &= ~WHODATA_ACTIVE;
                     dir_it->options |= REALTIME_ACTIVE;
                 }
@@ -322,7 +311,7 @@ int main(int argc, char **argv)
 
             OSList_foreach(node_it, syscheck.wildcards) {
                 dir_it = node_it->data;
-                if ((dir_it->options & WHODATA_ACTIVE)) {
+                if (dir_it->options & WHODATA_ACTIVE) {
                     dir_it->options &= ~WHODATA_ACTIVE;
                     dir_it->options |= REALTIME_ACTIVE;
                 }
@@ -339,6 +328,13 @@ int main(int argc, char **argv)
         merror(FIM_ERROR_WHODATA_AUDIT_SUPPORT);
 #endif
     }
+
+    /* Introduce delay based on agent ID */
+    char agent_id[64];
+    strcpy(agent_id, getAgentId());
+    int delay = atoi(agent_id) % 60;
+    mdebug1("Waiting %d minutes before starting syscheck (based on agent ID: %s)", delay, agent_id);
+    usleep(delay * 1000000 * 60); // Convert delay minutes
 
     /* Start the daemon */
     start_daemon();

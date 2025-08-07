@@ -58,7 +58,7 @@ override_dh_install:
 	USER_AGENT_SERVER_IP="MANAGER_IP" \
 	USER_CA_STORE="/path/to/my_cert.pem" \
 	USER_AUTO_START="n" \
-	./install.sh || { echo "install.sh failed! Aborting." >&2; exit 1; }
+	./install.sh
 
 	# Copying init.d script
 	mkdir -p ${TARGET_DIR}/etc/init.d/
@@ -92,9 +92,10 @@ override_dh_install:
 	mkdir -p ${TARGET_DIR}$(INSTALLATION_SCRIPTS_DIR)/
 	cp gen_ossec.sh ${TARGET_DIR}$(INSTALLATION_SCRIPTS_DIR)/
 	cp add_localfiles.sh ${TARGET_DIR}$(INSTALLATION_SCRIPTS_DIR)/
-	cp VERSION.json ${TARGET_DIR}$(INSTALLATION_SCRIPTS_DIR)/
 
 	mkdir -p ${TARGET_DIR}$(INSTALLATION_SCRIPTS_DIR)/src
+	cp src/VERSION ${TARGET_DIR}$(INSTALLATION_SCRIPTS_DIR)/src/
+	cp src/REVISION ${TARGET_DIR}$(INSTALLATION_SCRIPTS_DIR)/src/
 
 	# Install configuration assesment files and files templates
 	mkdir -p ${TARGET_DIR}$(INSTALLATION_SCRIPTS_DIR)/sca/applications
@@ -111,7 +112,6 @@ override_dh_install:
 	mkdir -p ${TARGET_DIR}$(INSTALLATION_SCRIPTS_DIR)/sca/ubuntu/18/04
 	mkdir -p ${TARGET_DIR}$(INSTALLATION_SCRIPTS_DIR)/sca/ubuntu/20/04
 	mkdir -p ${TARGET_DIR}$(INSTALLATION_SCRIPTS_DIR)/sca/ubuntu/22/04
-	mkdir -p ${TARGET_DIR}$(INSTALLATION_SCRIPTS_DIR)/sca/ubuntu/24/04
 
 	cp -r ruleset/sca/* ${TARGET_DIR}$(INSTALLATION_SCRIPTS_DIR)/sca
 
@@ -133,7 +133,6 @@ override_dh_install:
 	cp etc/templates/config/ubuntu/18/04/sca.files ${TARGET_DIR}$(INSTALLATION_SCRIPTS_DIR)/sca/ubuntu/18/04
 	cp etc/templates/config/ubuntu/20/04/sca.files ${TARGET_DIR}$(INSTALLATION_SCRIPTS_DIR)/sca/ubuntu/20/04
 	cp etc/templates/config/ubuntu/22/04/sca.files ${TARGET_DIR}$(INSTALLATION_SCRIPTS_DIR)/sca/ubuntu/22/04
-	cp etc/templates/config/ubuntu/24/04/sca.files ${TARGET_DIR}$(INSTALLATION_SCRIPTS_DIR)/sca/ubuntu/24/04
 
 	mkdir -p ${TARGET_DIR}$(INSTALLATION_SCRIPTS_DIR)/src/init
 	cp -r src/init/*  ${TARGET_DIR}$(INSTALLATION_SCRIPTS_DIR)/src/init
